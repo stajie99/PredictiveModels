@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>&DiacriticalGrave;coding&lowbar;portfolio&DiacriticalGrave; contains the codes for three projects in its subfolders&colon; WFAR&lowbar;code&comma; taxi&lowbar;market&lowbar;code&comma; and CFPCA&lowbar;code&period;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <hr>
+<h1 id="coding_portfolio-contains-the-codes-for-three-projects-in-its-subfolders-wfar_code-taxi_market_code-and-cfpca_code"><code>coding_portfolio</code> contains the codes for three projects in its subfolders: WFAR_code, taxi_market_code, and CFPCA_code.</h1>
+<h2 id="description">Description</h2>
+<h3 id="1-wfar_code-main-function-wfarm--matlab-code-for-warping-functional-autoregressive-wfar-model">1. WFAR_code (main function: WFAR.m – MATLAB code for Warping Functional AutoRegressive (WFAR) Model)</h3>
+<p>This MATLAB code proposes a noval time series forecasting model (namely, <strong>WFAR model</strong>) for high dimensional, high frequency and seasonal time series data, in particular, the 1-day ahead electricity price. The code further performs a comprehensive comparison of various time series forecasting models e.g. FAR, VAR, AR*, SAR, ARX* models against the proposed WFAR model.</p>
+<p>The electricity price data from two power markets are used: (1) the Nord Pool market from 2013.01.01 to 2017.12.31, (2) the California market from 1999.07.05 to 2001.01.31. This code was originally published with the paper: &quot;Modeling Seasonality and Serial Dependence of Electricity Price Curves with Warping Functional Autoregressive Dynamics&quot; by The Annals of Applied Statistics in 2019.</p>
+<h3 id="2-taxi_market_code-main-function-analysetransmktinefficiency_stage1to3rmd---r-code-for-taxi-market-inefficiency-analysis-mismatched-trips-2015-01-01-to-2017-06-30">2. taxi_market_code (main function: AnalyseTransMktInefficiency_Stage1to3.Rmd - R code for Taxi Market Inefficiency Analysis: Mismatched Trips 2015-01-01 to 2017-06-30)</h3>
+<p>This project partitions a day into sub-time-intervals and analyse the taxi drivers’ behaviours to shed light on Singapore local transport market efficiency in each sub-time-interval in a day. For the first time, by establishing the market inefficiency metrics with optimized calculation algorithm this project analyzes taxi operational statuses in each 5-minute intervals (288 intervals/day) across 170,478 unique taxi IDs operating in Singapore during 2015-01-01 to 2017-06-30.</p>
+<p>This project was funded and in collabration with LTA. The local taxi operators involved in the analyzed taxi data are: CDG, Premier, SMRT, TransCab.</p>
+<h3 id="3-cfpca_code-the-cfpca_codes-for-1-day-ahead-international-yield-curve-prediction">3. CFPCA_code (the CFPCA_codes for 1-day ahead International Yield Curve Prediction)</h3>
+<p>This project proposes an international yield curve predictive model, where common
+factors are identified using the common functional principal component (<strong>CFPC</strong>)
+method. For the 1-day ahead out-of-sample forecasts of the US, Sterling, Euro
+and Japanese yield curve from 07 April 2014 to 06 April 2015, the CFPC factor
+model is compared with several alternative factor models based on the functional principal
+component analysis.</p>
+<p>The code was first published with the paper &quot;International Yield Curve Prediction with Common Functional Principal Component Analysis&quot; by Robustness in Econometrics in 2017.</p>
+<h2 id="notable-features">Notable Features:</h2>
+<p>The <strong>WFAR model</strong> handles intraday patterns through time warping. the codes implements WFAR and provides a rigorous comparison of functional data approaches and traditional autoregressive/econometric models for electricity price forecasting.</p>
+<ol>
+<li>The time warping approach splits the typical daily price pattern (seasonal) variations by day of week from the price level variations.</li>
+<li>The function autoregressive model (FAR) is applied on the seasonal-adjusted price values.</li>
+<li>The day of week effects (calendar effects) are properly addressed through fixed warping function, as shown by the improvement of forecast accuracy.</li>
+<li>The WFAR model is fast and applicable to other seasonal time series in financial market.</li>
+</ol>
+<p>The <strong>taxi market inefficiency project</strong>.</p>
+<ol>
+<li>Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics</li>
+<li>Granualar Taxi Status Identification up to each 5-min interval across 55 local markets (planning areas of Singapore) during 2.5 years</li>
+<li>Data heavy and computationally heavy</li>
+<li>Algorithm optimization via vectorization and profiling tools</li>
+</ol>
+<p>The <strong>CFPCA model</strong>.</p>
+<ol>
+<li>Computes and compares several yield curve modeling techniques.
+- Dynamic Nelson-Siegel (DNS)
+- Common Principal Components (CPC)
+- Combined Functional Principal Components Analysis (combFPCA)
+- Common Functional Principal Components (CFPC)</li>
+<li>Generates 1-day ahead and 5-days-ahead forecasts using AR(1) framework with error elevaluation.</li>
+</ol>
+<h2 id="usage">Usage</h2>
+<p>Refer to each <a href="http://README.html">README.md</a> file in the subfolders.</p>
+<h2 id="author--contact">Author &amp; Contact</h2>
+<ul>
+<li><strong>Author</strong>: Jiejie Zhang</li>
+<li><strong>Date</strong>: 2025-03-30</li>
+<li><strong>Contact</strong>: <a href="mailto:jiejiezhangsta@gmail.com">jiejiezhangsta@gmail.com</a></li>
+</ul>
+<hr>
+
+            
+            
+        </body>
+        </html>

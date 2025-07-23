@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+1. November 11 2019, by Jiejie.
+
+Part II.
+
+```{r}
+# setwd("C:/Users/bizzjie/Downloads/taxi machao 20171017/")
+# ptm = proc.time()
+# load("Data_taxi20160101_20170630_cleaned.RData")
+# proc.time() - ptm
+# # load("booking_tripsid 20170101-20181031 20190909.RData")
+```
+
+```{r}
+library(data.table)
+ptm = proc.time()
+Data_taxi = read.csv("C:/CBE DATA/LTA/Din's Taxi/taxi tpb matched 20160101-20170630 20191107.csv")#, colClasses = c(rep("character", 2), "integer", rep("character", 3), "numeric"))
+Data_taxi = setDT(Data_taxi)
+proc.time() - ptm
+
+dim(Data_taxi)
+# 22151171        7
+
+# lapply(Data_taxi[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# # $idTrip
+# #  [1] 20 19 24 16 15 12 13 14 11 10  9
+# # 
+# # $idVehicle
+# # [1] 8 7 5 6
+# # 
+# # $idDriver
+# # [1] 7 6 5 4 3 9 2 1 0
+# ncharD = nchar(Data_taxi$idDriver)
+# unique(Data_taxi[ncharD == 0, .(idDriver)])
+# sum(ncharD == 0)/nrow(Data_taxi)
+# # "", no.=4577, perc =0.02%
+# unique(Data_taxi[ncharD == 1, .(idDriver)])
+# sum(ncharD == 1)/nrow(Data_taxi)
+
+
+nrow(Data_taxi)/nrow(Data_taxi_cleaned2016to17)
+# # 8% of all taxi data.
+Data_taxifiltered = Data_taxi#[euclid < 0.05]
+# nrow(Data_taxifiltered)/nrow(Data_taxi)
+# # 
+
+```
+
+
+```{r}
+
+# Data_taxifiltered[, idDriver := formatC(Data_taxifiltered$idDriver, width = 7, format = "d", flag = "0")]
+
+# booking_concatenated      = paste(Data_taxifiltered$idTrip, Data_taxifiltered$idVehicle)
+# Data_taxi_concatenated    = paste(Data_taxi_cleaned2016to17$idtrip, Data_taxi_cleaned2016to17$idvehicle)
+
+booking_concatenated      = paste(Data_taxifiltered$idTrip, Data_taxifiltered$idVehicle, Data_taxifiltered$idDriver)
+Data_taxi_concatenated    = paste(Data_taxi_cleaned2016to17$idtrip, Data_taxi_cleaned2016to17$idvehicle, Data_taxi_cleaned2016to17$iddriver)
+
+ind                       = chmatch(booking_concatenated, Data_taxi_concatenated)
+
+booking_leftout = Data_taxifiltered[is.na(ind)]
+print(paste("tpb booking that cannot be matched: ", nrow(booking_leftout), sep=""))
+# 714757
+
+# 5376
+print(paste("% tpb booking that cannot be matched: ", nrow(booking_leftout)/nrow(Data_taxifiltered), sep=""))
+
+
+write.csv(booking_leftout, file = paste("machao processed by Aston/tpbbookingleftout.csv", sep = ""))
+
+
+booking_matched       = Data_taxifiltered[!is.na(ind), ]
+
+Data_taxi_matched     = Data_taxi_cleaned2016to17[ind[!is.na(ind)], .(idtrip, idvehicle, iddriver, company)]
+print(paste("% trips in 2016-2017 that are matched as tpb booking: ", nrow(Data_taxi_matched)/nrow(Data_taxi_cleaned2016to17), sep=""))
+
+
+match_test            = cbind(booking_matched, Data_taxi_matched)
+which(match_test$idTrip != match_test$idtrip)
+# 0, meaning all the idtrips are matched.
+which(match_test$idVehicle != match_test$idvehicle)
+# 0, meaning all the idvehicle are matched.
+which(match_test$idVehicle != match_test$idvehicle)
+# 0, meaning all the iddriver are matched.
+
+
+Data_taxi_cleaned2016to17[, tpbbooking := 0]
+Data_taxi_cleaned2016to17[ind[!is.na(ind)], tpbbooking := 1]
+
+save(Data_taxi_cleaned2016to17, file = "Data_taxi_cleaned_tpbbooking20160101_20170630.RData")
+
+```
+
+```{r}
+
+```
+

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>R codes for Taxi Market Inefficiency Analysis&colon; Mismatched Trips &lpar;2015-01-01 to 2017-06-30&rpar;</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <hr>
+<h1 id="r-codes-for-taxi-market-inefficiency-analysis-mismatched-trips-2015-01-01-to-2017-06-30">R codes for Taxi Market Inefficiency Analysis: Mismatched Trips (2015-01-01 to 2017-06-30)</h1>
+<h1 id="analysetransmktinefficiency_stage1to3rmd">AnalyseTransMktInefficiency_Stage1to3.Rmd</h1>
+<h2 id="project-overview">Project Overview</h2>
+<p>This project partitions a day into sub-time-intervals and analyse the taxi drivers’ behaviours to shed light on Singapore local transport market efficiency in each sub-time-interval in a day.</p>
+<p>For the first time, by establishing the market inefficiency metrics with optimized calculation algorithm this project analyzes taxi operational statuses in each 5-minute intervals (288 intervals/day) across 170,478 unique taxi IDs operating in Singapore during 2015-01-01 to 2017-06-30.</p>
+<p>This project was funded and in collabration with LTA. The local taxi operators involved in the analyzed taxi data are: CDG, Premier, SMRT, TransCab. (All the data used are unfortunately not accessible now for confidential reason.) Here's a breakdown of what the script does.</p>
+<h2 id="notable-features">Notable Features:</h2>
+<h3 id="1-noval-analysis-framework-of-taxi-status-types-and-market-inefficiency-metrics">1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics</h3>
+<ul>
+<li><strong>Left empty</strong>, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.</li>
+<li><strong>Local empty</strong>, binary</li>
+<li><strong>Local pickup</strong> (via phone booking, TPB booking, non-booking), binary</li>
+<li><strong>Foreign pickup</strong> (via phone booking, TPB booking, non-booking), binary</li>
+<li><strong>Break statuses</strong> (left break, local break), binary</li>
+<li><strong>Friction</strong>. For each of the 55 planning area, for each 5-min interval <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span>,</li>
+</ul>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>f</mi><mi>r</mi><mi>i</mi><mi>c</mi><mi>t</mi><mi>i</mi><mi>o</mi><msub><mi>n</mi><mi>t</mi></msub><mo>=</mo><mi>m</mi><mi>i</mi><mi>n</mi><mo stretchy="false">{</mo><mi>c</mi><mi>u</mi><mi>m</mi><mi>u</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>v</mi><mi>e</mi><mi mathvariant="normal">_</mi><mi>l</mi><mi>o</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi mathvariant="normal">_</mi><mi>e</mi><mi>m</mi><mi>p</mi><mi>t</mi><msub><mi>y</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo separator="true">,</mo><mi>c</mi><mi>u</mi><mi>m</mi><mi>u</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>v</mi><mi>e</mi><mi mathvariant="normal">_</mi><mi>f</mi><mi>o</mi><mi>r</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>n</mi><mi mathvariant="normal">_</mi><mi>p</mi><mi>i</mi><mi>c</mi><mi>k</mi><mi>u</mi><mi>p</mi><msub><mi>s</mi><mi>t</mi></msub><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">  friction_t = min\{cumulative\_local\_empty_{t-1}, cumulative\_foreign\_pickups_{t}\}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mord mathnormal">min</span><span class="mopen">{</span><span class="mord mathnormal">c</span><span class="mord mathnormal">u</span><span class="mord mathnormal">m</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">oc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal">e</span><span class="mord mathnormal">m</span><span class="mord mathnormal">pt</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">c</span><span class="mord mathnormal">u</span><span class="mord mathnormal">m</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal">ore</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">n</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal">p</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mord mathnormal">u</span><span class="mord mathnormal">p</span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">}</span></span></span></span></span></p>
+<ul>
+<li><strong>Mismatch</strong>. For each of the 55 planning area, for each 5-min interval <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span>,</li>
+</ul>
+<p class="katex-block"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>m</mi><mi>i</mi><mi>s</mi><mi>m</mi><mi>a</mi><mi>t</mi><mi>c</mi><msub><mi>h</mi><mi>t</mi></msub><mo>=</mo><mi>m</mi><mi>i</mi><mi>n</mi><mo stretchy="false">{</mo><mi>c</mi><mi>u</mi><mi>m</mi><mi>u</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>v</mi><mi>e</mi><mi mathvariant="normal">_</mi><mi>l</mi><mi>o</mi><mi>c</mi><mi>a</mi><mi>l</mi><mi mathvariant="normal">_</mi><mi>l</mi><mi>e</mi><mi>a</mi><mi>v</mi><mi>e</mi><mi>r</mi><msub><mi>s</mi><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mo separator="true">,</mo><mi>c</mi><mi>u</mi><mi>m</mi><mi>u</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>v</mi><mi>e</mi><mi mathvariant="normal">_</mi><mi>f</mi><mi>o</mi><mi>r</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>n</mi><mi mathvariant="normal">_</mi><mi>p</mi><mi>i</mi><mi>c</mi><mi>k</mi><mi>u</mi><mi>p</mi><msub><mi>s</mi><mi>t</mi></msub><mo>−</mo><mi>f</mi><mi>r</mi><mi>i</mi><mi>c</mi><mi>t</mi><mi>i</mi><mi>o</mi><msub><mi>n</mi><mi>t</mi></msub><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">  mismatch_t = min\{cumulative\_local\_leavers_{t-1}, cumulative\_foreign\_pickups_{t} - friction_t\}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8444em;vertical-align:-0.15em;"></span><span class="mord mathnormal">mi</span><span class="mord mathnormal">s</span><span class="mord mathnormal">ma</span><span class="mord mathnormal">t</span><span class="mord mathnormal">c</span><span class="mord"><span class="mord mathnormal">h</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.06em;vertical-align:-0.31em;"></span><span class="mord mathnormal">min</span><span class="mopen">{</span><span class="mord mathnormal">c</span><span class="mord mathnormal">u</span><span class="mord mathnormal">m</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">oc</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">e</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal" style="margin-right:0.02778em;">er</span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">c</span><span class="mord mathnormal">u</span><span class="mord mathnormal">m</span><span class="mord mathnormal">u</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">e</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal">ore</span><span class="mord mathnormal">i</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">n</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal">p</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span><span class="mord mathnormal">u</span><span class="mord mathnormal">p</span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">}</span></span></span></span></span></p>
+<h4 id="taxi-status-types-illustration">Taxi Status Types Illustration</h4>
+<p><img src="file:///c:\Users\User\Dropbox\job\jiejie\Singapore\Applied Stage 2\73.Syfe\taxi_market_cbe\figs\graph_def.png" alt="Illustration of Taxi Status Types"></p>
+<h3 id="2-granualar-taxi-status-identification-up-to-each-5-min-interval-across-55-local-markets-planning-areas-of-singapore-during-25-years">2. Granualar Taxi Status Identification up to each 5-min interval across 55 local markets (planning areas of Singapore) during 2.5 years</h3>
+<h3 id="3-data-heavy-and-computationally-heavy">3. Data heavy and computationally heavy</h3>
+<ul>
+<li>~170k taxi IDs</li>
+<li>~373 million of trips</li>
+<li>complexity introduced by the defined Taxi Status types and Inefficiency metrics</li>
+</ul>
+<h3 id="4-algorithm-optimization-via-vectorization-and-profiling-tools">4. Algorithm optimization via vectorization and profiling tools</h3>
+<ul>
+<li>Eventually reduced computation time from months to hours.</li>
+</ul>
+<h2 id="key-components">Key Components</h2>
+<ol>
+<li>
+<p><strong>Data Loading &amp; Preparation (<code>taxiMismatchAnalysis_2andhalfyr_cleaning.Rmd</code>)</strong></p>
+<ul>
+<li>Clean and save the trip data</li>
+<li>Organize data with <code>OrganiseData()</code> function</li>
+<li>Create composite IDs for vehicles/drivers</li>
+</ul>
+</li>
+<li>
+<p><strong>Stage 1: Taxi Status Identification (<code>IdentifyTaxiStatus_v17.R</code>)</strong></p>
+<ul>
+<li>Process data in chunks of 1000 vehicles</li>
+<li>Use <code>IdentifyTaxiStatus()</code> to classify each vehicle's status at 5-minute intervals</li>
+<li>Save individual vehicle status tables</li>
+</ul>
+</li>
+<li>
+<p><strong>Stage 2: Analysis Data Aggregation (<code>AccumulateTaxiStatusTables_v1.R</code>)</strong></p>
+<ul>
+<li>Accumulates all individual status tables into one master table</li>
+<li>Fills missing time intervals with zeros</li>
+<li>Orders data by area, date and time</li>
+</ul>
+</li>
+<li>
+<p><strong>Stage 3: Friction &amp; Mismatch Calculation (<code>CalculateFrictionandMismatch_v3.R</code>)</strong></p>
+<ul>
+<li>Computes friction and mismatch metrics using <code>CalculateFrictionandMismatch()</code></li>
+<li>Separates results by year (2016, 2017)</li>
+<li>Generates multiple summary statistics:
+<ul>
+<li>Pickups over time/area (%)</li>
+<li>Supply over time/area (%)</li>
+<li>Inefficiency metrics (short/long versions)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="technical-notes">Technical Notes</h3>
+<ol>
+<li>
+<p>The script uses several custom functions stored in separate R files:</p>
+<ul>
+<li><code>OrganiseData.R</code></li>
+<li><code>PrepareForStage1.R</code></li>
+<li><code>IdentifyTaxiStatus_v17.R</code></li>
+<li><code>ConvertNAto0.R</code></li>
+<li><code>AccumulateTaxiStatusTables_v1.R</code></li>
+<li><code>CalculateFrictionandMismatch_v3.R</code></li>
+</ul>
+</li>
+<li>
+<p>Key libraries used:</p>
+<pre><code class="language-r">library<span class="hljs-punctuation">(</span>data.table<span class="hljs-punctuation">)</span> <span class="hljs-comment"># For fast data manipulation</span>
+library<span class="hljs-punctuation">(</span>lubridate<span class="hljs-punctuation">)</span>  <span class="hljs-comment"># For date handling  </span>
+library<span class="hljs-punctuation">(</span>rio<span class="hljs-punctuation">)</span>        <span class="hljs-comment"># For data import/export</span>
+library<span class="hljs-punctuation">(</span>gsubfn<span class="hljs-punctuation">)</span>     <span class="hljs-comment"># For string manipulation</span>
+library<span class="hljs-punctuation">(</span>plyr<span class="hljs-punctuation">)</span>       <span class="hljs-comment"># powerful tool for data manipulation</span>
+library<span class="hljs-punctuation">(</span>profileR<span class="hljs-punctuation">)</span>   <span class="hljs-comment"># For identifying bottlenecks and optimizing code performance</span>
+
+</code></pre>
+</li>
+<li>
+<p>The analysis focuses on three booking types:</p>
+<ul>
+<li>Phone bookings (<code>pb</code>)</li>
+<li>Third-party bookings (<code>tb</code>)</li>
+<li>Street hails (<code>nonbooking</code>)</li>
+</ul>
+</li>
+<li>
+<p>Output files are saved with systematic naming conventions including dates.</p>
+</li>
+</ol>
+<p>This is a part of a larger research project analyzing taxi supply-demand dynamics in Singapore, focused on identifying inefficiencies in the taxi marketplace across different locations and times of day. With this analysis and output, statistical models can be built to revealing useful transport market insights and demand and supply.</p>
+<h2 id="author--contact">Author &amp; Contact</h2>
+<ul>
+<li><strong>Author</strong>: Jiejie Zhang, National University of Singapore</li>
+<li><strong>Date</strong>: 2021-12-31</li>
+<li><strong>Contact</strong>: <a href="mailto:jiejiezhangsta@gmail.com">jiejiezhangsta@gmail.com</a></li>
+</ul>
+<hr>
+
+            <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
+            
+        </body>
+        </html>

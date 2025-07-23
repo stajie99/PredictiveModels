@@ -1,0 +1,519 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Part I.
+
+```{r}
+# setwd("C:/Users/bizzjie/Dropbox/job/jiejie/Singapore/NUS-Buiz/CBE project/Taxi Project/Mismatch")
+# setwd("C:/Users/bizzjie/Downloads/taxi machao 20171017/")
+setwd("C:/Users/bizzjie/Dropbox/job/jiejie/Singapore/NUS-Buiz/CBE project/Taxi Project/Mismatch")
+
+library(data.table)
+library(plyr)
+library(lubridate)
+
+files = list.files(path = "machao processed by Aston", pattern = "cdg machao", full.names = TRUE)
+Data_taxicdg = setDT(ldply(files, fread))
+Data_taxicdg[, `:=`(company = factor(company), pareaPickup = factor(pareaPickup), pareaDropoff = factor(pareaDropoff))]
+
+files = list.files(path = "machao processed by Aston", pattern = "premier machao", full.names = TRUE)
+Data_taxipremier = setDT(ldply(files, fread))
+Data_taxipremier[, `:=`(company = factor(company), pareaPickup = factor(pareaPickup), pareaDropoff = factor(pareaDropoff))]
+
+files = list.files(path = "machao processed by Aston", pattern = "smrt machao", full.names = TRUE)
+Data_taxismrt = setDT(ldply(files, fread))
+Data_taxismrt[, `:=`(company = factor(company), pareaPickup = factor(pareaPickup), pareaDropoff = factor(pareaDropoff))]
+
+files = list.files(path = "machao processed by Aston", pattern = "transcab machao", full.names = TRUE)
+Data_taxitranscab = setDT(ldply(files, fread))
+Data_taxitranscab[, `:=`(company = factor(company), pareaPickup = factor(pareaPickup), pareaDropoff = factor(pareaDropoff))]
+
+```
+
+CDG.
+```{r}
+write.csv(summary(Data_taxicdg), file = "machao processed by Aston/flawed data in machao/summary cdg machao.csv")
+# 1. NA area
+lapply(Data_taxicdg, function(x) sum(x == "NA")/nrow(Data_taxicdg))
+naArea = Data_taxicdg$pareaPickup == "NA" | Data_taxicdg$pareaDropoff == "NA"
+# 3.8% of the cdg data has NA pickup area
+# 3.9% of the cdg data has NA dropoff area
+
+# 2. special records in id 
+lapply(Data_taxicdg[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# $idTrip
+# [1] 19 20 21
+# $idVehicle
+# [1] 7 8
+# $idDriver
+# [1] 7 0 6 5 4 3 1
+
+ncharD = nchar(Data_taxicdg$idDriver)
+unique(Data_taxicdg[ncharD == 0, .(idDriver)])
+sum(ncharD == 0)/nrow(Data_taxicdg)
+# "", 0.00006%
+unique(Data_taxicdg[ncharD == 1, .(idDriver)])
+sum(Data_taxicdg$idDriver == "$")/nrow(Data_taxicdg)
+# $ 0, <0.000005%
+
+ind = ncharD == 0| Data_taxicdg$idDriver == "$" | naArea
+sum(ind)/nrow(Data_taxicdg)
+# 7.4%
+write.csv(Data_taxicdg[ind], file = "machao processed by Aston/flawed data in machao/cdg machao with flawed records.csv")
+
+
+save(Data_taxicdg, file = "machao processed by Aston/cdg machao 20150101-20170630 20191108.Rdata")
+Data_taxicdg_cleaned = Data_taxicdg[!ind]
+rm(ncharD, naArea, ind, Data_taxicdg)
+
+write.csv(summary(Data_taxicdg_cleaned), file = "machao processed by Aston/flawed data in machao/summary after processing cdg machao.csv")
+```
+
+premier.
+```{r}
+# write.csv(summary(Data_taxipremier), file = "machao processed by Aston/flawed data in machao/summary premier machao.csv")
+# 1. NA area
+lapply(Data_taxipremier, function(x) sum(x == "NA")/nrow(Data_taxipremier))
+naArea = Data_taxipremier$pareaPickup == "NA" | Data_taxipremier$pareaDropoff == "NA"
+# 1% of the premier data has NA pickup area
+# 1% of the premier data has NA dropoff area
+
+# 2. special records in id 
+lapply(Data_taxipremier[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# [1] 24 26
+# 
+# $idVehicle
+# [1] 8
+# 
+# $idDriver
+# [1] 7 5 6 4
+
+
+# 3. distance
+sum(Data_taxipremier$distance == 0)/nrow(Data_taxipremier)
+# 1.3%
+sum(Data_taxipremier$distance >100)/nrow(Data_taxipremier)
+# no. = 388, pert = 0.001%
+
+ind = naArea | Data_taxipremier$distance == 0 | Data_taxipremier$distance > 100
+
+write.csv(Data_taxipremier[naArea], file = "machao processed by Aston/flawed data in machao/premier machao with flawed records.csv")
+
+Data_taxipremier_cleaned = Data_taxipremier[!ind]
+rm(ncharD, naArea, ind, Data_taxipremier)
+
+write.csv(summary(Data_taxipremier_cleaned), file = "machao processed by Aston/flawed data in machao/summary after processing premier machao.csv")
+```
+
+smrt.
+
+```{r}
+write.csv(summary(Data_taxismrt), file = "machao processed by Aston/flawed data in machao/summary smrt machao.csv")
+# 1. NA area
+lapply(Data_taxismrt, function(x) sum(x == "NA")/nrow(Data_taxismrt))
+naArea = Data_taxismrt$pareaPickup == "NA" | Data_taxismrt$pareaDropoff == "NA"
+# 0.4% of the smrt data has NA pickup area
+# 0.3% of the smrt data has NA dropoff area
+
+# 2. special records in id 
+lapply(Data_taxismrt[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# $idTrip
+# [1] 16
+# 
+# $idVehicle
+# [1] 8 7 6 5
+# 
+# $idDriver
+# [1] 5 9 4 2 3 1
+
+ncharD = nchar(Data_taxismrt$idDriver)
+unique(Data_taxismrt[ncharD == 1, .(idDriver)])
+# 8
+
+# 3. distance
+sum(Data_taxismrt$distance == 0)/nrow(Data_taxismrt)
+# 1.4%
+sum(Data_taxismrt$distance >100)/nrow(Data_taxismrt)
+# no. = 1780, pert = 0.003%
+
+ind = naArea | Data_taxismrt$distance == 0 | Data_taxismrt$distance > 100
+write.csv(Data_taxismrt[ind], file = "machao processed by Aston/flawed data in machao/smrt machao with flawed records.csv")
+
+Data_taxismrt_cleaned = Data_taxismrt[!ind]
+rm(ncharD, naArea, ind, Data_taxismrt)
+
+write.csv(summary(Data_taxismrt_cleaned), file = "machao processed by Aston/flawed data in machao/summary after processing smrt machao.csv")
+```
+
+transcrab
+
+```{r}
+write.csv(summary(Data_taxitranscab), file = "machao processed by Aston/flawed data in machao/summary transcab machao.csv")
+# 1. NA area
+lapply(Data_taxitranscab, function(x) sum(x == "NA")/nrow(Data_taxitranscab))
+naArea = Data_taxitranscab$pareaPickup == "NA" | Data_taxitranscab$pareaDropoff == "NA"
+# 18.6% of the transcab data has NA pickup area
+# 17.7% of the transcab data has NA dropoff area
+
+# 2. special records in id 
+lapply(Data_taxitranscab[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# $idTrip
+# [1] 16 15 14 12 13 11 10  9
+# 
+# $idVehicle
+# [1] 8
+# 
+# $idDriver
+# [1] 0 9 1
+
+ncharD = nchar(Data_taxitranscab$idDriver)
+unique(Data_taxitranscab[ncharD == 0, .(idDriver)])
+sum(ncharD == 0)/nrow(Data_taxitranscab)
+# "", 0.05%
+unique(Data_taxitranscab[ncharD == 1, .(idDriver)])
+
+# 3. distance
+sum(Data_taxitranscab$distance == 0)/nrow(Data_taxitranscab)
+# 0.44%
+sum(Data_taxitranscab$distance >100)/nrow(Data_taxitranscab)
+# no. = 1334, pert = 0.0019%
+
+ind = naArea | ncharD == 0 | Data_taxitranscab$distance == 0 | Data_taxitranscab$distance > 100
+write.csv(Data_taxitranscab[ind], file = "machao processed by Aston/flawed data in machao/transcab machao with flawed records.csv")
+
+Data_taxitranscab_cleaned = Data_taxitranscab[!ind]
+rm(ncharD, naArea, ind, Data_taxitranscab)
+
+write.csv(summary(Data_taxitranscab_cleaned), file = "machao processed by Aston/flawed data in machao/summary after processing transcab machao.csv")
+
+```
+
+```{r}
+ptm = proc.time()
+Data_taxi_cleaned = rbind(Data_taxicdg_cleaned, Data_taxipremier_cleaned, Data_taxismrt_cleaned, Data_taxitranscab_cleaned, fill = TRUE)
+# rm(Data_taxicdg, Data_taxipremier, Data_taxismrt, Data_taxitranscab, files)
+proc.time() - ptm
+
+dim(Data_taxi_cleaned)
+save(Data_taxi_cleaned, file = "machao processed by Aston/Data_taxi_cleaned 20150101-20170630 20191109.RData")
+```
+
+
+```{r}
+library(lubridate)
+names(Data_taxi_cleaned) = tolower(names(Data_taxi_cleaned))
+
+Data_taxi_cleaned[, `:=`(timepickup = ymd_hms(timepickup), timedropoff = ymd_hms(timedropoff))]
+Data_taxi_cleaned[, Date := date(timepickup)]
+Data_taxi_cleaned[, `:=`(year = year(Date), month = month(Date),
+                 start_time = as.ITime(timepickup), end_time = as.ITime(timedropoff))]
+
+# Data_taxi_cleaned[, day  := day(Date)]
+# Data_taxi_cleaned[, dow  := wday(Date)]
+# Data_taxi_cleaned[, start_hour := hour(start_time)]
+# Data_taxi_cleaned[, start_min  := minute(start_time)]
+# Data_taxi_cleaned[, end_hour := hour(end_time)]
+# Data_taxi_cleaned[, end_min  := minute(end_time)]
+```
+
+```{r}
+nrowD      = nrow(Data_taxi_cleaned)
+setorder(Data_taxi_cleaned, "idvehicle", "iddriver", "Date", "start_time")
+
+Data_taxi_cleaned[, time_diff := c(NA, difftime(Data_taxi_cleaned$timepickup[-1], Data_taxi_cleaned$timedropoff[-nrowD], units='mins'))]
+lapply(Data_taxi_cleaned, class)
+
+range(Data_taxi_cleaned$Date)
+
+Data_taxi_cleaned2016to17 = Data_taxi_cleaned[year != 2015]
+save(Data_taxi_cleaned2016to17, file = "Data_taxi_cleaned20160101_20170630.RData")
+
+Data_taxi_cleaned2015 = Data_taxi_cleaned[year == 2015]
+save(Data_taxi_cleaned2015, file = "Data_taxi_cleaned20150101_20151231.RData")
+
+rm(list=setdiff(ls(), "Data_taxi_cleaned2016to17"))
+# rm(Data_taxi_cleaned2015)
+```
+Part III.
+
+Include tpb booking left-out recovered data.
+```{r}
+library(data.table)
+ptm = proc.time()
+Data_taxi_recovered = read.csv("C:/CBE DATA/LTA/Din's Taxi/tpbbookingleftout recovery.csv", colClasses = c("character", "factor", rep("character", 4), rep("numeric", 10), rep("factor", 2)))
+Data_taxi_recovered = setDT(Data_taxi_recovered)
+proc.time() - ptm
+
+dim(Data_taxi_recovered)
+# recovered: [1] 706959     18
+# left-out: 714757
+head(Data_taxi_recovered)
+lapply(Data_taxi_recovered, class)
+```
+Recovered data.
+```{r}
+write.csv(summary(Data_taxi_recovered), file = "machao processed by Aston/flawed data in tpb recovered data/summary tpb recovered data.csv")
+# 1. NA area
+lapply(Data_taxi_recovered, function(x) sum(is.na(x))/nrow(Data_taxi_recovered))
+naArea = is.na(Data_taxi_recovered$pareaPickup) | is.na(Data_taxi_recovered$pareaDropoff)
+# 0.01% of the recovered data has NA distance
+# 94.3% of the recovered data has NA feeGrab(tpb fare)
+# 2.3% of the recovered data has NA pickup area
+# 0% of the recovered data has NA dropoff area
+
+# 2. special records in id 
+lapply(Data_taxi_recovered[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# $idTrip
+# [1] 20 19 16 24 13 15 14 12 11
+# 
+# $idVehicle
+# [1] 8 7 5 6
+# 
+# $idDriver
+# [1] 7 5 6 4 3 9 1 2 0
+
+# 3. distance
+sum(is.na(Data_taxi_recovered$distance))/nrow(Data_taxi_recovered)
+# 0.01% 
+sum(Data_taxi_recovered$distance == 0, na.rm = TRUE)/nrow(Data_taxi_recovered)
+# no. = 2, pert = 0.0003%
+sum(Data_taxi_recovered$distance >100, na.rm = TRUE)/nrow(Data_taxi_recovered)
+# no. = 8, pert = 0.0011%
+
+ind = naArea | is.na(Data_taxi_recovered$distance) | Data_taxi_recovered$distance ==0 | Data_taxi_recovered$distance>100
+sum(ind)/nrow(Data_taxi_recovered)
+# 2.3%
+write.csv(Data_taxi_recovered[ind], file = "machao processed by Aston/flawed data in tpb recovered data/tpb recovered data with flawed records.csv")
+
+Data_taxi_recovered_cleaned = Data_taxi_recovered[!ind]
+rm(naArea, ind, Data_taxi_recovered)
+
+write.csv(summary(Data_taxi_recovered_cleaned), file = "machao processed by Aston/flawed data in tpb recovered data/summary tpb recovered data.csv")
+
+```
+
+
+
+```{r}
+library(lubridate)
+
+Data_taxi_recovered_cleaned[, company := factor(tolower(company))]
+names(Data_taxi_recovered_cleaned) = tolower(names(Data_taxi_recovered_cleaned))
+
+Data_taxi_recovered_cleaned[, `:=`(timepickup = ymd_hms(timepickup), timedropoff = ymd_hms(timedropoff))]
+
+Data_taxi_recovered_cleaned[, Date := date(timepickup)]
+Data_taxi_recovered_cleaned[, `:=`(year = year(Date), month = month(Date),
+                 start_time = as.ITime(timepickup), end_time = as.ITime(timedropoff), tpbbooking = 1)]
+
+
+lapply(Data_taxi_recovered_cleaned, class)
+dim(Data_taxi_recovered_cleaned)
+range(Data_taxi_recovered_cleaned$Date)
+
+```
+
+To append. 
+```{r}
+ptm = proc.time()
+load("Data_taxi_cleaned_tpbbooking20160101_20170630.RData")
+proc.time() - ptm
+dim(Data_taxi_cleaned2016to17)
+# 274366672        31
+lapply(Data_taxi_cleaned2016to17, class)
+```
+
+Appending.
+```{r}
+ptm = proc.time()
+Data_taxi_tpbcleaned2016to17 = rbind(Data_taxi_cleaned2016to17, Data_taxi_recovered_cleaned, fill = TRUE)
+proc.time() - ptm
+
+dim(Data_taxi_tpbcleaned2016to17)
+# [1] 275057056        32
+dim(Data_taxi_cleaned2016to17)
+# original: 274366672        31
+nrow(Data_taxi_tpbcleaned2016to17) == nrow(Data_taxi_cleaned2016to17) + nrow(Data_taxi_recovered_cleaned)
+# [1] TRUE
+lapply(Data_taxi_cleaned2016to17, class)
+lapply(Data_taxi_tpbcleaned2016to17, class)
+
+```
+
+```{r}
+write.csv(summary(Data_taxi_tpbcleaned2016to17), file = "machao processed by Aston/summary tpb cleaned 2016-2017.csv")
+
+Data_taxi_tpbcleaned2016to17[is.na(end_time),]
+#                  idtrip  company idvehicle  iddriver          timepickup timedropoff distance
+#  1: CDGA6955E16060701021      cdg  SHA6955E   1582351 2016-06-07 01:02:28        <NA>     7.80
+#  2: CDGC0114U16060601293      cdg  SHC0114U    302307 2016-06-06 01:29:51        <NA>    25.77
+#  3: CDGC0475C16060601110      cdg  SHC0475C   1423550 2016-06-06 01:12:02        <NA>    17.26
+#  4: CDGC1883B16060601073      cdg  SHC1883B      2924 2016-06-06 01:08:06        <NA>    24.90
+#  5:     TRANSCAB12567034 transcab  SHC5418K S1219290H 2016-06-06 18:26:09        <NA>     7.73
+#  6:     TRANSCAB12663296 transcab  SHC5457Y S1731740G 2016-06-07 22:57:29        <NA>    11.86
+#  7: CDGD3359E16060701153      cdg  SHD3359E   7528870 2016-06-07 01:15:28        <NA>    16.84
+#  8:     SMRT000231026893     smrt  SHD6025Z 900003518 2016-06-07 23:02:45        <NA>    21.00
+#  9:     TRANSCAB12610286 transcab  SHD9038S S1196089H 2016-06-06 22:14:51        <NA>     4.97
+# 10:     TRANSCAB12564673 transcab  SHD9850M S1234521F 2016-06-07 01:13:28        <NA>     8.61
+# 11:     SMRT000230965614     smrt   SHF139H 900000041 2016-06-06 21:50:54        <NA>    14.28
+Data_taxi_tpbcleaned2016to17 = Data_taxi_tpbcleaned2016to17[!is.na(end_time),]
+Data_taxi_tpbcleaned2016to17[, dayofweek :=NULL]
+
+Data_taxi_tpbcleaned2016to17[company == "premier taxis", company := "premier"]
+Data_taxi_tpbcleaned2016to17[, company := factor(company)]
+
+write.csv(summary(Data_taxi_tpbcleaned2016to17), file = "machao processed by Aston/summary tpb cleaned 2016-2017.csv")
+
+
+
+
+ptm = proc.time()
+setorder(Data_taxi_tpbcleaned2016to17, "idvehicle", "iddriver", "Date", "start_time")
+proc.time() - ptm
+
+nrowD = nrow(Data_taxi_tpbcleaned2016to17)
+
+Data_taxi_tpbcleaned2016to17[, time_diff := c(NA, difftime(Data_taxi_tpbcleaned2016to17$timepickup[-1], Data_taxi_tpbcleaned2016to17$timedropoff[-nrowD], units='mins'))]
+
+
+library(rio)
+export(Data_taxi_tpbcleaned2016to17, "Data_taxi_cleaned_tpbbooking20160101_20170630 20191115.RData")
+```
+
+Fares, timeduration cleaning.
+```{r}
+ptm = proc.time()
+load("Data_taxi_cleaned_tpbbooking20160101_20170630 20191115.RData")
+proc.time() - ptm
+
+Data_taxi_tpbcleaned2016to17 = x
+rm(x)
+library(data.table)
+# fare
+Data_taxi_tpbcleaned2016to17[, totalfare := sum(faredistance, fareflagdown, surchargeerp, surchargelocation, surchargepeak, feebooking, feedynamic, feegrab, na.rm = TRUE), by = 1:nrow(Data_taxi_tpbcleaned2016to17)]
+
+Data_taxi_tpbcleaned2016to17[, time_dura := as.numeric(difftime(Data_taxi_tpbcleaned2016to17$timedropoff, Data_taxi_tpbcleaned2016to17$timepickup, units='mins'))]
+
+library(rio)
+export(Data_taxi_tpbcleaned2016to17[time_dura == 0], "machao processed by Aston/flawed data in machao/timeDurationIs0.csv")
+
+Data_taxi_tpbcleaned2016to17 = Data_taxi_tpbcleaned2016to17[time_dura > 0]
+
+
+export(Data_taxi_tpbcleaned2016to17[totalfare - time_dura - distance > 300 & distance<0.5 & time_dura<10], "machao processed by Aston/flawed data in machao/intricate fares.csv")
+Data_taxi_tpbcleaned2016to17 = Data_taxi_tpbcleaned2016to17[!(totalfare - time_dura - distance > 300 & distance<0.5 & time_dura<10)]
+
+save(Data_taxi_tpbcleaned2016to17, file = "Data_taxi_cleaned_tpbbooking20160101_20170630 20191122.RData")
+```
+2017-2018
+
+```{r}
+library(data.table)
+Data_taxi_tpb2017to18 = fread("C:/CBE DATA/LTA/Din's Taxi/taxi planning area 20170701-20181031 20191202.csv")
+
+# write.csv(summary(Data_taxi_tpb2017to18), file = "machao processed by Aston/Data_taxi_tpb2017to18.csv")
+Data_taxi_tpb2017to18 = Data_taxi_tpb2017to18[company != "prime"]
+# 1. NA area
+# lapply(Data_taxi_tpb2017to18, function(x) sum(is.na(x))/nrow(Data_taxi_tpb2017to18))
+naArea = is.na(Data_taxi_tpb2017to18$pareaPickup)|is.na(Data_taxi_tpb2017to18$pareaDropoff)
+# 0.039% of the cdg data has NA pickup area
+# 0.028% of the cdg data has NA dropoff area
+
+# 2. special records in id 
+# lapply(Data_taxi_tpb2017to18[, .(idTrip, idVehicle, idDriver)], function(x) unique(nchar(x)))
+# $idTrip
+# [1] 24 20 16 19
+# 
+# $idVehicle
+# [1] 40
+# 
+# $idDriver
+# [1] 40  0
+
+ncharD = nchar(Data_taxi_tpb2017to18$idDriver)
+# unique(Data_taxi_tpb2017to18[ncharD == 0, .(idDriver)])
+# sum(ncharD == 0)/nrow(Data_taxi_tpb2017to18)
+# # "", 0.06%
+# 
+ind = ncharD == 0| naArea|Data_taxi_tpb2017to18$distance >100 
+sum(ind)/nrow(Data_taxi_tpb2017to18)
+# 0.1%
+write.csv(Data_taxi_tpb2017to18[ind], file = "machao processed by Aston/2017-2018 with flawed records.csv")
+# 
+# 
+Data_taxi_tpbcleaned2017to18 = Data_taxi_tpb2017to18[!ind]
+rm(ncharD, naArea, ind, Data_taxi_tpb2017to18)
+
+write.csv(summary(Data_taxi_tpbcleaned2017to18), file = "machao processed by Aston/Data_taxi_tpb2017to18.csv")
+
+```
+
+```{r}
+library(lubridate)
+names(Data_taxi_tpbcleaned2017to18) = tolower(names(Data_taxi_tpbcleaned2017to18))
+Data_taxi_tpbcleaned2017to18[, `:=`(company = factor(company), pareapickup = factor(pareapickup), pareadropoff = factor(pareadropoff))]
+
+Data_taxi_tpbcleaned2017to18[, `:=`(timepickup = ymd_hms(timepickup), timedropoff = ymd_hms(timedropoff))]
+Data_taxi_tpbcleaned2017to18[, Date := date(timepickup)]
+Data_taxi_tpbcleaned2017to18[, `:=`(year = year(Date), month = month(Date),
+                 start_time = as.ITime(timepickup), end_time = as.ITime(timedropoff))]
+```
+
+```{r}
+# fare
+Data_taxi_tpbcleaned2017to18[, totalfare := sum(faredistance, fareflagdown, surchargeerp, surchargelocation, surchargepeak, feebooking, feedynamic, na.rm = TRUE), by = 1:nrow(Data_taxi_tpbcleaned2017to18)]
+
+Data_taxi_tpbcleaned2017to18[, time_dura := as.numeric(difftime(Data_taxi_tpbcleaned2017to18$timedropoff, Data_taxi_tpbcleaned2017to18$timepickup, units='mins'))]
+
+library(rio)
+export(Data_taxi_tpbcleaned2017to18[time_dura == 0], "machao processed by Aston/flawed data in machao/timeDurationIs0 2017-2018.csv")
+
+Data_taxi_tpbcleaned2017to18 = Data_taxi_tpbcleaned2017to18[time_dura > 0]
+
+
+export(Data_taxi_tpbcleaned2017to18[totalfare - time_dura - distance > 300 & distance<0.5 & time_dura<10], "machao processed by Aston/flawed data in machao/intricate fares 2017-2018.csv")
+Data_taxi_tpbcleaned2017to18 = Data_taxi_tpbcleaned2017to18[!(totalfare - time_dura - distance > 300 & distance<0.5 & time_dura<10)]
+```
+
+
+```{r}
+nrowD      = nrow(Data_taxi_tpbcleaned2017to18)
+setorder(Data_taxi_tpbcleaned2017to18, "idvehicle", "iddriver", "Date", "start_time")
+
+Data_taxi_tpbcleaned2017to18[, time_diff := c(NA, difftime(Data_taxi_tpbcleaned2017to18$timepickup[-1], Data_taxi_tpbcleaned2017to18$timedropoff[-nrowD], units='mins'))]
+lapply(Data_taxi_tpbcleaned2017to18, class)
+
+range(Data_taxi_tpbcleaned2017to18$Date)
+
+# save(Data_taxi_tpbcleaned2017to18, file = "machao processed by Aston/Data_taxi_cleaned_tpbbooking20170701_20181031 20191202.RData")
+
+# rm(list=setdiff(ls(), "Data_taxi_cleaned2016to17"))
+```
+
+
+```{r}
+Data_taxi_tpbcleaned2017to18_1206 = copy(Data_taxi_tpbcleaned2017to18)
+
+load("machao processed by Aston/Data_taxi_cleaned_tpbbooking20170701_20181031 20191202.RData")
+Data_taxi_tpbcleaned2017to18[, date:= NULL]
+
+dim(Data_taxi_tpbcleaned2017to18_1206)
+dim(Data_taxi_tpbcleaned2017to18)
+
+identical(Data_taxi_tpbcleaned2017to18_1206[, 1:25], Data_taxi_tpbcleaned2017to18[, 1:25])
+#  TRUE
+identical(Data_taxi_tpbcleaned2017to18_1206[, 26], Data_taxi_tpbcleaned2017to18[, 26])
+#  TRUE
+identical(Data_taxi_tpbcleaned2017to18_1206[, 28:31], Data_taxi_tpbcleaned2017to18[, 27:30])
+#  TRUE
+identical(Data_taxi_tpbcleaned2017to18_1206[, 32:34], Data_taxi_tpbcleaned2017to18[, 32:34])
+#  TRUE
+identical(Data_taxi_tpbcleaned2017to18_1206[, 27], Data_taxi_tpbcleaned2017to18[, 31])
+# TRUE
+```
+
+
+
+

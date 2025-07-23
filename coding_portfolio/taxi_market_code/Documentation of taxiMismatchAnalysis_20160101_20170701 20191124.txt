@@ -1,0 +1,366 @@
+---
+title: taxiMismatchAnalysis_20160101_20170701 20191124.Rmd
+output: 
+---
+1. Taxi Status Identification and Taxi Status Table generation
+2. Dec 29, 2021, by Jiejie.
+
+The goal is to generate a table for each id (~170478) in the data set from 2016-01-01 to 2017-06-30. These tables show the taxis’ status of 5 types in each 5-min interval in a day (in total 288/day). 
+
+The variables of 5 types (16*4=64 subtypes/columns) are 
+1. left empty, 
+2. local empty, 
+3. local pickup via phone booking, tpb booking and not via booking
+   and fare 
+4. foreign pickup via phone booking, tpb booking, and not via booking
+   and fare
+5. left break
+6. local break.
+7. cdg, premier, smrt, transcab
+
+
+========================================================================
+========================================================================
+========================================================================
+Step 0: Data preparation.
+======
+
+
+
+Part I.
+title: taxiMismatchAnalysis_2andhalfyr_cleaning.Rmd
+1.
+SetDT(ldply(files, fread)) the "cdg machao*" files in "machao processed by Aston" folder, get Data_taxicdg.
+Make company, pareapickup, pareadropoff factor.
+Similarly, get Data_taxipremier, Data_taxismrt, Data_taxitranscab.
+2. 
+Remove NA area.
+naArea = Data_taxicdg$pareaPickup == "NA" | Data_taxicdg$pareaDropoff == "NA"
+Check speacial records in id. 
+cdg--> "" and $; transcab--> "".
+Unrealistic distance.
+premier, smart, transcab--> 0 or >100
+
+Output cdg flawed records. Save cdg raw data. Summary.
+Output premier flawed record. Summary.
+Output smrt flawed record. Summary.
+3.
+Rbind cdg, premier, smrt, transcab cleaned data, get Data_taxi_cleaned.
+Save Data_taxi_cleaned in the name of Data_taxi_cleaned 20150101-20170630 20191109.RData (6G)
+4.
+Lowercase all column names.
+Ymd_hms timepickup and timedropoff.
+Get Data via date(timepickup), then year and month.
+Get start_time, end_time via as.ITime(timepickup), as.ITime(timedropoff).
+(should remove)Sort by idvehicle, iddriver, Date, start_time.
+(should remove)Generate variable time_diff, measured in mins, denoting the time difference between time pickup of jth trip and time dropoff of (j-1)th's.
+
+Get Data_taxi_cleaned2016to17, save as Data_taxi_cleaned20160101_20170630.RData (8G).
+Get Data_taxi_cleaned2015, save as Data_taxi_cleaned20150101_20151231.RData (5G).
+======
+
+
+
+Part II.
+title: taxiMismatchAnalysis_2andhalfyr_allocation.Rmd
+
+Fread taxi tpb matched 20160101-20170630 20191107.csv.
+Check special records in id. (No)
+Match by (idtrip, idvehicle, iddriver).
+Save booking_leftout in the name of tpbbookingleftout.csv.
+Test matching in terms of (idtrip, idvehicle, iddriver).
+
+For those matched trips, let tpbbooking = 1, otherwise 0.
+Save Data_taxi_cleaned2016to17 as "Data_taxi_cleaned_tpbbooking20160101_20170630.RData" (8G).
+Pass tpbbookingleftout.csv to Din.
+======
+
+
+
+Part III.
+Include tpb booking left-out recovered data.
+
+Fread tpbbookingleftout recovery.csv Summary.
+Check NA area. (Yes)
+Check special id. (No)
+Check distance = 0 or >100.
+Output tpb recovered data with flawed records.csv.
+Summary Data_taxi_recovered_cleaned.
+
+Lowercase the column names.
+Ymd_hms timepickup, timedropoff
+Get Data via date(timepickup), then year and month.
+Get start_time, end_time via as.ITime(timepickup), as.ITime(timedropoff).
+
+
+Load "Data_taxi_cleaned_tpbbooking20160101_20170630.RData" (8G).
+Rbind Data_taxi_cleaned2016to17, Data_taxi_recovered_cleaned.
+Summary.
+Remove end_time/timedropoff = NA.
+Remove dayofweek column.
+Factor company.
+Summary.
+Sort by idvehicle, iddriver, Date, start_time.
+Generate variable time_diff, measured in mins, denoting the time difference between time pickup of jth trip and time dropoff of (j-1)th's.
+Save Data_taxi_tpbcleaned2016to17 as "Data_taxi_cleaned_tpbbooking20160101_20170630 20191115.RData".
+
+Fares, timeduration cleaning.
+totalfare := sum(faredistance, fareflagdown, surchargeerp, surchargelocation, surchargepeak, 
+feebooking, feedynamic, feegrab, na.rm = TRUE), by = 1:nrow(Data_taxi_tpbcleaned2016to17)
+Remove trips with time duration = 0 .
+Output trips with totalfare - time_dura - distance > 300 & distance<0.5 & time_dura<10 as intricate fares.csv.
+Save Data_taxi_tpbcleaned2016to17 (intricate fare trips removed) as "Data_taxi_cleaned_tpbbooking20160101_20170630 20191122.RData"
+
+
+
+========================================================================
+========================================================================
+========================================================================
+
+
+Step 1:
+Taxi Status Identification
+"IdentifyTaxiStatus_v17.Rmd"
+
+Input: "Data_taxi_cleaned_tpbbooking20160101_20170630 20191122.RData"
+
+Libraries:
+data.table for large data analysis. Benefit from the assignment by reference feature. Doesn't really copy            data when assigning.
+lubridate for date and time management. hms(). period_to_seconds().
+utils for csv file reading and writing. 
+==========================================
+Add 0 to factor level of timepickup and timedropoff.
+Generate id_composite_key column by paste idvehicle and iddriver together.
+Generate id_unique to be unique id_composite_key.
+
+Generate dates vector to be the continuous dates from the smallest Date to the largerest Date.
+Generate Date0 to be the smallest Date, Daten to be the largest Date.
+Generate nintervals to be 24*60/5=288.
+
+
+Generate t_start to be the n-th 5-min interval of the start_time.
+Generate t_end to be the n-th 5-min interval of the end_time.
+remove intermediate variables in above steps.
+
+Transform t_start and t_end to universal time (starting from 1 of Date0 ending on last of Daten).
+
+Generate data_consecutivetime to be a data.table with the Unitime column.
+Unitime = 1: (length of dates * nintervals)
+===========================================
+Step 2:
+Before loop:
+Source function.
+Define function to suppress an expected warning message.
+Define vector of selected columns.
+
+
+Outer loop to save results every 1000 inner loops.
+In outer iteration k,
+   initiate an empty list myfile.
+   
+   Inner loop to iterate among every unique id_composite_key covered in the kth outer iteration.
+   In inner iteration i,
+   Step 2.1:
+   Assign all the trips by id_unqiue[i,] with selecte columns to Data_taxi_perid.
+
+   Step 2.2:
+   Error message 1: if there is only 1 trip over the period, print (idvehicle, iddriver, company), otherwise do:
+   Step 2.3:
+   First, the sourced function TaxiStatus_identifier() has 5 inputs: (x= Data_taxi_perid, data_consecutivetime, Date0, Daten, nintervals).
+   Second, assign the output of the TaxiStatus_identifier() to myfile's 1st, 2nd, ... element.
+   End of innter loop.
+   
+   Print to see length(myfile) from each outer iteration = 1000.
+   Rbindlist myfile with fill=TRUE, get Data_taxi_5types.
+   Remove myfile.
+   
+   Export Data_taxi_5types as Data_taxi_5types_id",i, ".csv". 
+     this is a rbind taxi status table of 1000 id (8G).
+   
+   Export: na and 0 ignored, lappy sum(x, na.rm = TRUE) on each Subset of Datatable defined by keyby = (area, Date, time),
+     as cum5tp_v",i, ".csv".
+     this is a cumulative table of 1000 id (0.5G).
+ End of outer loop.
+===========================================
+Step 3:
+(TaxiStatus_identifier_v7.R)
+(TaxiStatus_identifier_v13.R)
+TaxiStatus_identifier_v16.R
+TaxiStatus_identifier(x, data_consecutivetime, Date0, Daten, nintervals) function.
+
+Step 3.1:
+Copy data_consecutivetime to Data_consecutivetime.
+
+Data_consecutivetime will be the key to join different status segments.
+==================
+Step 3.2: Time difference binary variable generation.
+Column time_diff_lesseq60mins. 1 indicates it's less than or equal to 60 mins between time pickup of trip j and time dropoff of trip j-1 ; 0 indicates more than 60 mins.
+time_diff_lqthan60mins = 1 - time_diff_lesseq60mins
+
+===================
+Step 3.3: Local variable generation.
+Column localtmp. localtmp = 1 indicates that at the end of the jth trip, after dropping
+off, IN whatever minutes, this id picks up a passenger in THIS drop off area and starts its (j+1)th trip.
+
+local = localtmp * time_diff_lesseq60mins, indicates that IN less than or equal to 60 mins this id picks up locally
+      , and will result in local empty status.
+local_break = localtmp * time_diff_lgthan60mins, indicates IN larger than 60 mins.... 
+      , and will result in local break status.
+===================
+Step 3.4: Foreign variable generation.
+foreign  = (1-localtmp) * time_diff_lesseq60mins, ...foreignly, ... left empty....
+left_break  = (1-localtmp) * time_diff_lgthan60mins, ...foreignly, ... left break....
+Rm(localtmp).
+===================
+Step 3.5: Pick up table.
+On Date=Date at time=time in area=area, this id made a pick up, and earn fare = totalfare.
+Generate data.table pickup as the (area = pareapickup, uni_time = t_startUni, fare = totalfare) columns with the first row removed in x.
+===================
+Step 3.6: Booking variable
+Generate phobooking indicator vector, phobooking = 1 if feebooking(with the first row removed) > 0; else 0.
+Generate tpbbooking indicator vector = tpbbooking (with the first row removed).
+Generate nonbooking indicator vector = 1, if phobooking + tpbbooking ==0; else 0.
+
+local_pickup_phobooking = 1 indicates that on Date=Date at time=time in area=area, this id made a local pick up via phone booking; 0 if not.
+local_pickup_nonbooking =1 indicates that on Date=Date at time=time in area=area, this id made a local pick up not via booking; 0 if not.
+====================
+Step 3.7: Empty variable.
+To have the 5-min time ticks between the end of jth trip and the start of the (j+1)th trip. 
+On Date=Date at time=time in area=area, this id was empty.
+=======
+Combine (t_endUni) column with the last row removed in x
+ and (t_startUni) column with the first row removed in x, get empty_tdts_trans.
+=======
+Step a:
+The apply(G, 1, fun) function outputs the 5-min time ticks at which the id was empty.
+Input: G, function = timeticksbtw.
+Output: empty_timelist, a list containing the time ticks.
+
+timeticksbtw(et) function.
+t1 = et[1] + 1
+t2 = et[2] - 1
+if t1 <= t2, y = t1:t2
+else y=c()
+return(y).
+========
+Step b:
+If the each call to timeticksbtw() returns a vector of the same length m, apply returns a matrix of m * nrow(E).
+Check if empty_timelist is a matrix, if yes, make it a list with each column as its elements.
+Get lengths_timeticks.
+
+If lengths_timeticks is not of length 0, 
+Generate
+local_empty      = rep(local, lengths_timeticks)
+local_break      = rep(local_break, lengths_timeticks)
+left_empty       = rep(foreign, lengths_timeticks)
+left_break       = rep(left_break, lengths_timeticks)
+
+Generate vector 'vec' by repeating each element of 1:(nrowx - 1) by 'lengths_timeticks' times.
+Generate 
+EmptyBreak       = data.table(area = x$pareadropoff[vec], uni_time = unlist(empty_timelist),
+                                  local_empty = local_empty, left_empty = left_empty,
+                                  local_break = local_break, left_break = left_break)
+rm(local_empty, local_break, left_empty, left_break, vec, empty_timelist).
+=========================
+Step 3.8: joining/assigning.
+Generate ind1 = pickup$uni_time.
+  in Data_consectivetime, at timeind1,
+  assign new columns of 
+area = pickup$area,
+local_pickup_phobooking = local * phobooking.
+fare_localpk_pb = local * phobooking * pickup$fare.
+
+local_pickup_tpbbooking = local * tpbbooking.
+fare_localpk_tb = local * tpbbooking * pickup$fare.
+
+local_pickup_nonbooking = local * nonbooking. 
+fare_localpk_nb = local * nonbooking * pickup$fare.
+
+foreign_pickup_phobooking = foreign * booking.
+fare_foreignpk_pb = foreign * phobooking * pickup$fare.
+
+foreign_pickup_tpbbooking = foreign * tpbbooking.
+fare_foreignpk_tp = foreign * tpbbooking * pickup$fare.
+
+foreign_pickup_nonbooking = foreign * nonbooking.
+fare_foreignpk_nb = foreign * nonbooking * pickup$fare.
+rm(local, foreign, phobooking, tpbbooking, nonbooking, pickup, ind1)
+==========
+If lengths_timeticks is not of length 0, 
+Generate ind2 = local_empty$uni_time.
+  in Data_consectivetime, at timeind2,
+  assign new columns of 
+area = local_empty$area,
+local_empty = EmptyBreak$local_empty, 
+left_empty  = EmptyBreak$left_empty,
+local_break = EmptyBreak$local_break, 
+left_break = EmptyBreak$left_break.
+    
+Else.
+area = "0", local_empty = 0, left_empty  = 0, local_break = 0, left_break = 0
+==========================
+In Data_consectivetime,
+assign new columns of 
+time by repeating 1:nintervals Daten - Date0 + 1 times.
+Date by repeating Date0:Daten each of nintervals times.
+
+Define vector columnsnd = c("Date", "area", "time", "Unitime",
+                "local_pickup_phobooking", "fare_localpk_pb",
+                "local_pickup_tpbbooking", "fare_localpk_tb",
+                "local_pickup_nonbooking", "fare_localpk_nb",
+                "foreign_pickup_phobooking", "fare_foreignpk_pb",
+                "foreign_pickup_tpbbooking", "fare_foreignpk_tp",
+                "foreign_pickup_nonbooking", "fare_foreignpk_nb",
+                "local_empty", "left_empty",
+                "local_break", "left_break")
+Replace all the NAs in Data_consectivetime with 0s.
+Assign Data_consectivetime[, ..columnsnd] to Data_taxi5types.
+Change names(Data_taxi5types)[5:20] by pasting names(Data_taxi5types)[5:20] and company[1].
+rm(list=setdiff(ls(), "Data_taxi5types"))
+===========================
+Step 3.9:
+return (Data_taxi5types).
+
+End of TaxiStatus_identifier() function.
+=======================================================================================
+Step 4:
+Do accumulation.
+
+Set options(scipen=999) and allow large numbers represented not in a scientific way.
+Lapply fread all the first 70 files with "cum5tp_v" pattern (in total 86G). Rbindlist and get cum5tp.
+For cum5tp, ignore area=0, lapply sum(x, na.rm = TRUE) function on each Subset of Datatable by 
+   keyby = (area, Date, time). Get CUM5tp1.
+rm(cum5tp).
+
+Lapply fread ... the second 70 files ....
+.... Get CUM5tp2. ...
+
+Lapply fread ... the rest 30 files ....
+.... Get CUM5tp2. ...
+
+Rbind CUM5TP1, CUM5tp2, CUM5tp3, get cum5tp. 
+Lapply sum(x, na.rm = TRUE) function on each Subset of Datatable by keyby = (area, Date, time). Get CUM5tp.
+Get CUM5tp, later rename to Data_taxi_cum5tp.
+rm(cum5tp, CUM5tp1, CUM5tp2, CUM5tp3, files).
+=============================
+Step 5:
+Fill and standardise.
+
+Remove area==0, order by (area, Date, time) for Data_taxi_cum5tp.
+Make Date := ymd(Date).
+Get data_rage, get dates. Get nintervals and areas = read.csv("local areas-filled-latest.csv")[1:55,2].
+
+Get
+Data_ConsecutiveTime = data.table(area = rep(rep(areas, each = nintervals), length(dates))
+                                    , Date = rep(dates, each = nintervals * length(areas))
+                                    , time = rep(1:nintervals, length(dates) * length(areas))).
+
+Merge
+Data_taxi_cum5tpfilled = merge(Data_ConsecutiveTime, Data_taxi_cum5tp, by = c("area", "Date", "time"), all = TRUE).
+
+Replace NA with 0s.
+Export Data_taxi_cum5tpfilled as "Data_taxi_cum5tp_v",j, "filled.csv" (1.6G).
+========================================================================================
+End.
+
+

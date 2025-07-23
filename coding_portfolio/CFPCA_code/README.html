@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>CFPCA&lowbar;code for 1-day ahead International Yield Curve Prediction</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <h1 id="cfpca_code-for-1-day-ahead-international-yield-curve-prediction">CFPCA_code for 1-day ahead International Yield Curve Prediction</h1>
+<h2 id="description">Description</h2>
+<p>This project proposes an international yield curve predictive model, where common
+factors are identified using the common functional principal component (CFPC)
+method. For the 1-day ahead out-of-sample forecasts of the US, Sterling, Euro
+and Japanese yield curve from 07 April 2014 to 06 April 2015, the CFPC factor
+model is compared with several alternative factor models based on the functional principal
+component analysis.</p>
+<p>The code was first published with the paper &quot;International Yield Curve Prediction with Common Functional Principal Component Analysis&quot; by Robustness in Econometrics in 2017. The data unfortunately is not accessible now.</p>
+<p>Here's a breakdown of what the codes do.</p>
+<h2 id="usage">Usage</h2>
+<ol>
+<li>Place the CFPCA_code folder in your MATLAB working directory.</li>
+<li>Run the script in MATLAB to clean and structure the input data:<pre><code class="language-matlab">dataInput_151013.m  <span class="hljs-comment">%Input data prepration;</span>
+</code></pre>
+</li>
+<li>Run the script in MATLAB to estimation the PCA forecasting models:<pre><code class="language-matlab">modelEstimation_151118.m  <span class="hljs-comment">%MODELESTIMATION;</span>
+</code></pre>
+</li>
+<li>Run the script in MATLAB to estimation the PCA forecasting models:<pre><code class="language-matlab">PCAforecastAr1.m  <span class="hljs-comment">%Model forecasting;</span>
+</code></pre>
+</li>
+</ol>
+<h2 id="model-estimation-modelestimation_151118m">Model Estimation (<code>modelEstimation_151118.m</code>)</h2>
+<p>This MATLAB script computes and compares several yield curve modeling techniques, saving results to files and generating visualizations.</p>
+<h3 id="description-1">Description</h3>
+<p>The script performs the following analyses:</p>
+<ul>
+<li>Dynamic Nelson-Siegel Model</li>
+<li>PCA (multivariate) of separate datasets</li>
+<li>PCA (multivariate) of combined dataset</li>
+<li>CPC model (multivariate)</li>
+<li>FPCAs of separate data sets using spline basis</li>
+<li>CFPCA using spline basis</li>
+<li>Summary comparison of all models</li>
+</ul>
+<h3 id="features">Features</h3>
+<ol>
+<li>
+<p><strong>Multiple Modeling Techniques</strong>:</p>
+<ul>
+<li>Traditional statistical methods (PCA)</li>
+<li>Functional data analysis approaches (FPCA, CFPCA)</li>
+<li>Financial economics model (Dynamic Nelson-Siegel)</li>
+</ul>
+</li>
+<li>
+<p><strong>Visualization</strong>:</p>
+<ul>
+<li>Generates plots for factor loadings, principal components, and scores</li>
+<li>Creates summary comparison plots</li>
+<li>Saves figures in PNG format</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Handling</strong>:</p>
+<ul>
+<li>Works with multiple country datasets simultaneously</li>
+<li>Performs spline estimation and mean correction</li>
+</ul>
+</li>
+<li>
+<p><strong>Output</strong>:</p>
+<ul>
+<li>Saves model results to MAT files</li>
+<li>Exports explained variation metrics to Excel files</li>
+<li>Generates comprehensive visualizations</li>
+</ul>
+</li>
+</ol>
+<h3 id="output-files">Output Files</h3>
+<p>The script generates several output files:</p>
+<h4 id="data-files-variables">Data Files (<code>Variables/</code>):</h4>
+<ul>
+<li><code>model_dns.mat</code>            - Dynamic Nelson-Siegel results</li>
+<li><code>model_pca.mat</code>            - PCA results for separate datasets</li>
+<li><code>model_pca_comb.mat</code>       - PCA results for combined dataset</li>
+<li><code>model_cpc.mat</code>            - CPC model results</li>
+<li><code>model_fpca.mat</code>           - FPCA results</li>
+<li><code>model_fpca_comb.mat</code>      - Combined FPCA results</li>
+</ul>
+<h2 id="ar1-forecasting-for-dns-cpc-combfpca-and-cfpc-models-pcaforecastar1m">AR(1) Forecasting for DNS, CPC, combFPCA, and CFPC Models (<code>PCAforecastAr1.m</code>)</h2>
+<p>This MATLAB script performs AR(1) forecasting for four different yield curve modeling approaches:</p>
+<ul>
+<li>
+<ol>
+<li>Dynamic Nelson-Siegel (DNS)</li>
+</ol>
+</li>
+<li>
+<ol start="2">
+<li>Common Principal Components (CPC)</li>
+</ol>
+</li>
+<li>
+<ol start="3">
+<li>Combined Functional Principal Components Analysis (combFPCA)</li>
+</ol>
+</li>
+<li>
+<ol start="4">
+<li>Common Functional Principal Components (CFPC)</li>
+</ol>
+</li>
+</ul>
+<p>The script generates 1-day ahead and 5-days-ahead forecasts, calculates error metrics, and saves results in Excel files and MATLAB data files.</p>
+<h3 id="features-1">Features</h3>
+<ul>
+<li>Computes descriptive statistics for factors and scores</li>
+<li>Generates forecasts for:
+<ul>
+<li>DNS factors</li>
+<li>CPC scores</li>
+<li>combFPCA scores</li>
+<li>CFPC scores</li>
+</ul>
+</li>
+<li>Calculates Root Mean Square Error (RMSE) and Mean Absolute Deviation (MAD) metrics</li>
+<li>Saves forecast results in Excel format (.xls)</li>
+<li>Generates forecast visualization plots (.png)</li>
+<li>Stores complete forecast models in MATLAB data files (.mat)</li>
+</ul>
+<h3 id="error-metrics">Error Metrics</h3>
+<ul>
+<li>RMS_Scores: Root Mean Square Error for scores</li>
+<li>RMS_Maturities: RMSE for maturities</li>
+<li>RMS_Curves: RMSE for entire curves</li>
+<li>MAD_Scores: Mean Absolute Deviation for scores</li>
+<li>MAD_Maturities: MAD for maturities</li>
+<li>MAD_Curves: MAD for entire curves</li>
+</ul>
+<h3 id="results-illustration">Results illustration</h3>
+<p><strong>Figure 1</strong>: Common functional component scores against the maturities (months).</p>
+<p><img src="file:///c:\Users\User\Dropbox\job\jiejie\Singapore\Applied Stage 2\73.Syfe\CFPCA_code\figs\PCs.png" alt="Common functional component scores against the maturities (months)."></p>
+<p><strong>Figure 2</strong>: Explained variation of the first three common functional factors.</p>
+<p><img src="file:///c:\Users\User\Dropbox\job\jiejie\Singapore\Applied Stage 2\73.Syfe\CFPCA_code\figs\VarExplained.png" alt="Explained variation of the first three common functional factors."></p>
+<h2 id="author--contact">Author &amp; Contact</h2>
+<ul>
+<li><strong>Author</strong>: Jiejie Zhang, National University of Singapore</li>
+<li><strong>Date</strong>: 2017-10-03</li>
+<li><strong>Contact</strong>: <a href="mailto:jiejiezhangsta@gmail.com">jiejiezhangsta@gmail.com</a></li>
+</ul>
+
+            
+            
+        </body>
+        </html>

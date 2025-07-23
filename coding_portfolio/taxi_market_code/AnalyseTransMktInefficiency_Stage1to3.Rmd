@@ -1,0 +1,406 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+1. February 26, 2020, by Jiejie.
+
+Stage 1 starts.
+```{r, message=FALSE}
+# setwd("D:/Dropbox/job/jiejie/Singapore/NUS-Buiz/CBE project/Taxi Project/Mismatch")
+setwd("C:/Users/bizzjie/Dropbox/job/jiejie/Singapore/NUS-Buiz/CBE project/Taxi Project/Mismatch")
+
+library(data.table)
+library(lubridate)
+library(rio)
+library(gsubfn) 
+# library(utils)
+# library(dplyr)
+# # f. Read in the area name from excel file by Lawrence.
+# areas = read.csv("local areas-filled-latest.csv")[1:55,2]
+```
+
+```{r}
+ptm = proc.time()
+load("Data_taxi_cleaned_tpbbooking20160101_20170630 20191122.RData")
+proc.time() - ptm
+
+source("OrganiseData.R")
+dtTaxiTrips = OrganiseData(Data_taxi_tpbcleaned2016to17)
+rm(Data_taxi_tpbcleaned2016to17)
+# ID
+dtTaxiTrips[, id_composite_key := paste(idvehicle, iddriver, sep = "_")]
+dtTaxiTrips[, idvehicle := NULL]
+dtTaxiTrips[, iddriver  := NULL]
+# save(dtTaxiTrips, file = "dtTaxiTrips.RData")
+```
+
+```{r}
+ptm = proc.time()
+# # Areas
+# levels(dtTaxiTrips$pareapickup)  = c(levels(dtTaxiTrips$pareapickup), 0)
+# levels(dtTaxiTrips$pareadropoff) = c(levels(dtTaxiTrips$pareadropoff), 0)
+
+lengthInterval      = 5 # in mins
+source("PrepareForStage1.R")
+list[idUnique, Date0, DateN, dtTaxiTrips, timeConsecutive] = PrepareForStage1(dtTaxiTrips, lengthInterval)
+proc.time() - ptm
+
+```
+
+```{r}
+source("IdentifyTaxiStatus_v17.R")
+source("ConvertNAto0.R")
+h = function(w) if(any(grepl( "By order of hierarchy", w))) invokeRestart( "muffleWarning" )
+
+select_cols = c( "pareapickup", "pareadropoff", "t_startUniq", "t_endUniq", "time_diff", "company","feebooking", "tpbbooking", "totalfare")
+
+options(scipen=999)
+for (k in 0 : (length(idUnique)%/%1000-1)){
+  print(k)
+  myfile    = list()
+  for(i in (1 + 1000*k) : (1000*(k+1))){
+    # print(i)
+    # i=21
+    dtTaxiTripsPerid          = dtTaxiTrips[id_composite_key == idUnique[i], ..select_cols]
+    if(nrow(dtTaxiTripsPerid) == 1){}else{
+      myfile[[i - (1000*k)]]  = withCallingHandlers(
+        IdentifyTaxiStatus(x = dtTaxiTripsPerid
+                           , timeConsecutive = timeConsecutive
+                           , Date0 = Date0
+                           , DateN = DateN
+                           , nIntervals = nIntervals
+                           , id = idUnique[i])
+        , warning = h )
+      
+      export(myfile[[i - (1000*k)]]
+             , file = paste("F:/Jiejie_taxi/rdata 2016-2017/TaxiStatusTable/TaxiStatusTable_id",i, ".csv", sep = ""))
+    }
+  }
+  print(paste(k,"|",length(myfile), sep = ""))
+  dtTaxiStatus = rbindlist(myfile, fill = TRUE)
+  rm(myfile)
+  
+  ConvertNAto0(dtTaxiStatus, 6:ncol(dtTaxiStatus))
+  export(dtTaxiStatus[(area != "0") & (area != "")
+                          , lapply(.SD, sum)
+                          , keyby=.(area, Date, time)
+                          , .SDcols =-c("composite_id","Uniqtime")]
+         , file = paste("F:/Jiejie_taxi/rdata 2016-2017/TaxiStatus_v",i, ".csv", sep = ""))
+}
+
+
+```
+
+```{r}
+myfile    = list()
+for(j in (1 + i):length(idUnique)){
+    # print(j)
+    # i=27
+  dtTaxiTripsPerid = dtTaxiTrips[id_composite_key == idUnique[j], ..select_cols]
+
+  if(nrow(dtTaxiTripsPerid) == 1){}else{
+    myfile[[j - i]] = withCallingHandlers(
+      IdentifyTaxiStatus(x = dtTaxiTripsPerid
+                           , timeConsecutive = timeConsecutive
+                           , Date0 = Date0
+                           , DateN = DateN
+                           , nIntervals = nIntervals
+                           , id = idUnique[i])
+        , warning = h )
+    export(myfile[[j - i]], file = paste("F:/Jiejie_taxi/rdata 2016-2017/TaxiStatusTable/TaxiStatusTable_id",i, ".csv", sep = ""))
+  }
+}
+dtTaxiStatus = rbindlist(myfile, fill = TRUE)
+rm(myfile)
+  
+ConvertNAto0(dtTaxiStatus, 6:ncol(dtTaxiStatus))
+export(dtTaxiStatus[(area != "0") & (area != "")
+                          , lapply(.SD, sum)
+                          , keyby=.(area, Date, time)
+                          , .SDcols =-c("composite_id","Uniqtime")]
+         , file = paste("F:/Jiejie_taxi/rdata 2016-2017/TaxiStatus_v",j, ".csv", sep = ""))
+  
+export(cbind(1:length(idUnique), idUnique), "F:/Jiejie_taxi/rdata 2016-2017/id index mapping 2016-2017.csv")  
+```
+Stage 1 ends.
+Stage 2 starts.
+```{r}
+rm(list=setdiff(ls(), c("nIntervals", "idUnique", "Date0", "DateN")))
+source("ConvertNAto0.R")
+options(scipen=999)
+
+files = list.files(path = "F:/Jiejie_taxi/rdata 2016-2017/", pattern = "TaxiStatus_v", full.names = TRUE)
+files
+source("AccumulateTaxiStatusTables_v1.R")
+dtTaxiStatusCumulative = AccumulateTaxiStatusTables(files, m1 = 70, m2 = 140)
+
+```
+
+```{r}
+dtTaxiStatusCumulative = dtTaxiStatusCumulative[area != 0]
+setorder(dtTaxiStatusCumulative, "area", "Date", "time")
+```
+
+
+```{r}
+library(lubridate)
+library(rio)
+dtTaxiStatusCumulative[, Date := ymd(Date)]
+dateRange = range(dtTaxiStatusCumulative$Date, na.rm=TRUE)
+dates      = seq(dateRange[1], dateRange[2], by = 1)
+
+# f. Read in the area name from excel file by Lawrence.
+areas = read.csv("local areas-filled-latest.csv")[1:55,2]
+dtAreaTimeDateConsecutive = data.table(area = rep(rep(areas, each = nIntervals), length(dates))
+                                    , Date = rep(dates, each = nIntervals * length(areas))
+                                    , time = rep(1:nIntervals, length(dates) * length(areas)))
+dtTaxiStatusCumulativeFilled = merge(dtAreaTimeDateConsecutive, dtTaxiStatusCumulative, by = c("area", "Date", "time"), all = TRUE)
+
+ConvertNAto0(dtTaxiStatusCumulativeFilled)
+j = length(idUnique)
+export(dtTaxiStatusCumulativeFilled, paste("F:/Jiejie_taxi/rdata 2016-2017/dtTaxiStatusCumulative_v",j, "Filled ", Sys.Date(), ".csv",sep = ""))
+
+# rm(list=setdiff(ls(), "dtTaxiStatusCumulativeFilled"))
+```
+Stage 2 ends.
+
+
+
+Stage 3 starts.
+```{r}
+setorder(dtTaxiStatusCumulativeFilled, "area", "Date", "time")
+source("CalculateFrictionandMismatch_v3.R")
+ptm = proc.time()
+# takes 8 mins
+dtFrictionandMismatch = dtTaxiStatusCumulativeFilled[, CalculateFrictionandMismatch(.SD, .BY), keyby = .(area)]
+proc.time() - ptm
+
+setorder(dtFrictionandMismatch, "Date", "area", "time")
+save(dtFrictionandMismatch, file = paste("rdata/taxi friction and mismatch_", Date0, "to", DateN, Sys.Date(), ".RData", sep = ""))
+```
+
+Separate friction and mismatch of each year.
+```{r}
+# library(data.table)
+# library(lubridate)
+myyear = c(2016, 2017, 2018)[2]
+today = 20200212
+
+
+dtFrictionandMismatch[, year := year(Date)]
+dtFrictionandMismatchYearly = dtFrictionandMismatch[year == myyear]
+dtFrictionandMismatchYearly[, year := NULL]
+
+write.csv(dtFrictionandMismatchYearly, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/taxi friction and mismatch in", myyear ," ",today, ".csv", sep = ""))
+
+
+```
+
+1/5. pickups over time of the day(%).
+```{r}
+  
+pickups_over_time_of_day = dtFrictionandMismatchYearly[, .(total_pickup_Phonebooking = sum(total_pickup_pb)
+                                                                , total_pickup_TPBbooking = sum(total_pickup_tb)
+                                                                , street_hail  = sum(total_pickup_n)
+  ), by=.(time)]
+setorder(pickups_over_time_of_day, "time")
+
+pickups_over_time_of_day[, SUM := total_pickup_Phonebooking + total_pickup_TPBbooking + street_hail]
+pickups_over_time_of_day[, Percentage_total_pickup_Phonebooking := total_pickup_Phonebooking/SUM]
+pickups_over_time_of_day[, Percentage_total_pickup_TPBbooking   := total_pickup_TPBbooking/SUM]
+pickups_over_time_of_day[, Percentage_street_hail                 := street_hail/SUM]
+
+write.csv(pickups_over_time_of_day, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 1 and 5/pickups_over_time_of_day", myyear," ", today, ".csv", sep = ""))
+
+```
+
+9/13. pickups over areas of Singapore(%).
+```{r}
+pickups_over_area = dtFrictionandMismatchYearly[, .(total_pickup_Phonebooking = sum(total_pickup_pb)
+                                                                , total_pickup_TPBbooking = sum(total_pickup_tb)
+                                                                , street_hail  = sum(total_pickup_n)
+  ), by=.(area)]
+setorder(pickups_over_area, "area")
+
+pickups_over_area[, SUM := total_pickup_Phonebooking + total_pickup_TPBbooking + street_hail]
+pickups_over_area[, Percentage_total_pickup_Phonebooking := total_pickup_Phonebooking/SUM]
+pickups_over_area[, Percentage_total_pickup_TPBbooking   := total_pickup_TPBbooking/SUM]
+pickups_over_area[, Percentage_street_hail               := street_hail/SUM]
+
+write.csv(pickups_over_area, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 9 and 13/pickups_over_area_of_Singapore", myyear," ", today, ".csv", sep = ""))
+
+```
+
+2/6. supply over time of the day (%).
+```{r}
+supply_over_the_day = function(Data){
+  
+  Data[, local_pickup1 := local_pickup_phobooking + local_pickup_tpbbooking + local_pickup_nonbooking]
+  Data[, foreign_pickup1 := foreign_pickup_phobooking + foreign_pickup_tpbbooking + foreign_pickup_nonbooking]
+  Data[, local_empty1  := local_empty]
+
+  supply_over_time_of_day = Data[, .(local_pickup = sum(local_pickup1)
+                                     , foreign_pickup = sum(foreign_pickup1)
+                                     , local_empty  = sum(local_empty1)
+                                     , local_break  = sum(local_break)
+                                     , left_break   = sum(left_break)
+                                     # , foreign_empty = sum(foreign_empty1)
+  ), by=.(time)]
+  
+  return(supply_over_time_of_day)
+}
+
+# load(paste("Data_taxi_cum5tp_v",163630, ".RData",sep = ""))
+Data_taxi_cum5tpfilled[, year := year(Date)]
+  
+supply_over_time_of_day = supply_over_the_day(Data_taxi_cum5tpfilled[year == myyear])
+supply_over_time_of_day[, SUM := local_pickup + foreign_pickup + local_empty + local_break + left_break]
+supply_over_time_of_day[, Percentage_local_pickup := local_pickup/SUM]
+supply_over_time_of_day[, Percentage_foreign_pickup := foreign_pickup/SUM]
+supply_over_time_of_day[, Percentage_local_empty := local_empty/SUM]
+supply_over_time_of_day[, Percentage_local_break := local_break/SUM]
+supply_over_time_of_day[, Percentage_left_break  := left_break/SUM]
+setorder(supply_over_time_of_day, "time")
+
+write.csv(supply_over_time_of_day, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 2 and 6/supply_over_time_of_day", myyear," ", today, ".csv", sep = ""))
+  
+```
+
+10/14. supply over area of Singapore (%).
+```{r}
+supply_over_area = function(Data){
+  
+  Data[, local_pickup1 := local_pickup_phobooking + local_pickup_tpbbooking + local_pickup_nonbooking]
+  Data[, foreign_pickup1 := foreign_pickup_phobooking + foreign_pickup_tpbbooking + foreign_pickup_nonbooking]
+  Data[, local_empty1  := local_empty]
+
+  supply_over_area = Data[, .(local_pickup = sum(local_pickup1)
+                              , foreign_pickup = sum(foreign_pickup1)
+                              , local_empty  = sum(local_empty1)
+                              , local_break  = sum(local_break)
+                              , left_break   = sum(left_break)
+                              # , foreign_empty = sum(foreign_empty1)
+  ), by=.(area)]
+  
+  return(supply_over_area)
+}
+  
+supply_over_area_of_Singapore = supply_over_area(Data_taxi_cum5tpfilled[year == myyear])
+supply_over_area_of_Singapore[, SUM := local_pickup + foreign_pickup + local_empty + local_break + left_break]
+supply_over_area_of_Singapore[, Percentage_local_pickup := local_pickup/SUM]
+supply_over_area_of_Singapore[, Percentage_foreign_pickup := foreign_pickup/SUM]
+supply_over_area_of_Singapore[, Percentage_local_empty := local_empty/SUM]
+supply_over_area_of_Singapore[, Percentage_local_break := local_break/SUM]
+supply_over_area_of_Singapore[, Percentage_left_break  := left_break/SUM]
+setorder(supply_over_area_of_Singapore, "area")
+
+write.csv(supply_over_area_of_Singapore, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 10 and 14/supply_over_area", myyear," ", today, ".csv", sep = ""))
+
+
+```
+
+4/8. Inefficiency over time of the day (short)(%).
+```{r}
+inefficiency_over_time_of_day_short = dtFrictionandMismatchYearly[, .(friction = sum(friction)
+                                                                        , mismatch = sum(mismatch)
+                                                                    ), by = .(time)]
+setorder(inefficiency_over_time_of_day_short, "time")
+
+inefficiency_over_time_of_day_short = cbind(inefficiency_over_time_of_day_short, supply_over_time_of_day[, .(foreign_pickup)])
+inefficiency_over_time_of_day_short[, foreign_pickup_without_f_m := foreign_pickup - friction - mismatch]
+inefficiency_over_time_of_day_short[, Percentage_friction := friction/foreign_pickup]
+inefficiency_over_time_of_day_short[, Percentage_mismatch := mismatch/foreign_pickup]
+inefficiency_over_time_of_day_short[, Percentage_fpk_wo_fm := foreign_pickup_without_f_m/foreign_pickup]
+
+inefficiency_over_time_of_day_short= inefficiency_over_time_of_day_short[, .(time, friction, mismatch, foreign_pickup_without_f_m, Percentage_friction, Percentage_mismatch, Percentage_fpk_wo_fm)]
+
+write.csv(inefficiency_over_time_of_day_short, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 4 and 8/inefficiency_over_time_of_day_short", myyear," ",today, ".csv", sep = ""))
+
+```
+
+12/16. Inefficiency over area of Singapore (short)(%).
+```{r}
+inefficiency_over_area_short = dtFrictionandMismatchYearly[, .(friction = sum(friction)
+                                                                        , mismatch = sum(mismatch)
+                                                                    ), by = .(area)]
+  
+setorder(inefficiency_over_area_short, "area")
+inefficiency_over_area_short = cbind(inefficiency_over_area_short,  supply_over_area_of_Singapore[, .(foreign_pickup)])
+inefficiency_over_area_short[, foreign_pickup_without_f_m := foreign_pickup - friction - mismatch]
+inefficiency_over_area_short[, Percentage_friction := friction/foreign_pickup]
+inefficiency_over_area_short[, Percentage_mismatch := mismatch/foreign_pickup]
+
+inefficiency_over_area_short = inefficiency_over_area_short[, .(area, friction, mismatch, foreign_pickup_without_f_m, Percentage_friction, Percentage_mismatch)]
+
+write.csv(inefficiency_over_area_short, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 12 and 16/inefficiency_over_area_short", myyear," ",today, ".csv"))
+
+```
+
+3/7. Inefficiency over time of the day (long).
+```{r}
+tem = inefficiency_over_time_of_day_short[, .(time = time
+                                           , Sum_of_f_m = friction + mismatch
+                                           , foreign_pickup_without_f_m = foreign_pickup_without_f_m)]
+  
+  
+inefficiency_over_time_of_day_long = dtFrictionandMismatchYearly[, .(net_efficient_phonebk = sum(total_pickup_pb - mismatch_pb - friction_pb, na.rm = TRUE)
+                                                                             , net_efficient_TPBbk = sum(total_pickup_tb - mismatch_tb - friction_tb, na.rm = TRUE)
+                                                                        )
+                                                                    , by = .(time)]
+  
+setorder(inefficiency_over_time_of_day_long, "time")  
+setorder(tem, "time")
+inefficiency_over_time_of_day_long = cbind(tem, inefficiency_over_time_of_day_long, supply_over_time_of_day[, .(local_pickup)]) 
+
+inefficiency_over_time_of_day_long[, SUM := Sum_of_f_m + foreign_pickup_without_f_m + net_efficient_phonebk + net_efficient_TPBbk + local_pickup]
+inefficiency_over_time_of_day_long[, Percentage_Sumof_fm := Sum_of_f_m/SUM]
+inefficiency_over_time_of_day_long[, Percentage_foreign_pk_wo_fm := foreign_pickup_without_f_m/SUM]
+inefficiency_over_time_of_day_long[, Percentage_net_pb := net_efficient_phonebk/SUM]
+inefficiency_over_time_of_day_long[, Percentage_net_tb := net_efficient_TPBbk/SUM]
+inefficiency_over_time_of_day_long[, Percentage_local_pk := local_pickup/SUM]
+
+inefficiency_over_time_of_day_long= inefficiency_over_time_of_day_long[, .(time, Sum_of_f_m, foreign_pickup_without_f_m, net_efficient_phonebk, net_efficient_TPBbk, local_pickup, SUM, Percentage_Sumof_fm, Percentage_foreign_pk_wo_fm, Percentage_net_pb, Percentage_net_tb, Percentage_local_pk)]
+
+write.csv(inefficiency_over_time_of_day_long, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 3 and 7/inefficiency_over_time_of_day_long", myyear," ",today, ".csv", sep = ""))
+  
+
+```
+
+11/15. Inefficiency over area (long).
+```{r}
+
+tem = inefficiency_over_area_short[, .(area = area
+                                           , Sum_of_f_m = friction + mismatch
+                                           , foreign_pickup_without_f_m = foreign_pickup_without_f_m)]
+  
+  
+inefficiency_over_area_long = dtFrictionandMismatchYearly[, .(net_efficient_phonebk = sum(total_pickup_pb - mismatch_pb - friction_pb, na.rm = TRUE)
+                                                                             , net_efficient_TPBbk = sum(total_pickup_tb - mismatch_tb - friction_tb, na.rm = TRUE)
+                                                                        )
+                                                                    , by = .(area)]
+  
+  
+setorder(inefficiency_over_area_long, "area")
+setorder(tem, "area")
+inefficiency_over_area_long = cbind(tem, inefficiency_over_area_long, supply_over_area_of_Singapore[, .(local_pickup)]) 
+
+inefficiency_over_area_long[, SUM := Sum_of_f_m + foreign_pickup_without_f_m + net_efficient_phonebk + net_efficient_TPBbk + local_pickup]
+inefficiency_over_area_long[, Percentage_Sumof_fm := Sum_of_f_m/SUM]
+inefficiency_over_area_long[, Percentage_foreign_pk_wo_fm := foreign_pickup_without_f_m/SUM]
+inefficiency_over_area_long[, Percentage_net_pb := net_efficient_phonebk/SUM]
+inefficiency_over_area_long[, Percentage_net_tb := net_efficient_TPBbk/SUM]
+inefficiency_over_area_long[, Percentage_local_pk := local_pickup/SUM]
+
+inefficiency_over_area_long= inefficiency_over_area_long[, .(area, Sum_of_f_m, foreign_pickup_without_f_m, net_efficient_phonebk, net_efficient_TPBbk, local_pickup, SUM, Percentage_Sumof_fm, Percentage_foreign_pk_wo_fm, Percentage_net_pb, Percentage_net_tb, Percentage_local_pk)]
+
+write.csv(inefficiency_over_area_long, file = paste("C:/Users/bizzjie/Downloads/taxi machao 20171017/tables/friction and mismatch/Summary data for 11 and 15/inefficiency_over_area_long", myyear," ",today, ".csv", sep = ""))
+
+
+```
+
+
+
+```{r}
+
+```
+
