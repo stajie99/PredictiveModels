@@ -1,12 +1,12 @@
 
 ---
 
-# WFAR.m – MATLAB code for Warping Functional AutoRegressive (WFAR) Model  
+# WFAR.m – MATLAB code for Warping Functional AutoRegressive (WFAR) Model (NorD Pool market) 
 
 ## Description  
 This MATLAB code proposes a noval time series forecasting model (namely, WFAR model) for high dimensional, high frequency and seasonal time series data, in particular, the 1-day ahead electricity price. The code further performs a comprehensive comparison of various time series forecasting models e.g. FAR, VAR, AR*, SAR, ARX* models against the proposed WFAR model.
 
-The electricity price data from two power markets are used: (1) the Nord Pool market from 2013.01.01 to 2017.12.31, (2) the California market from 1999.07.05 to 2001.01.31. This code was originally published with the paper: "Modeling Seasonality and Serial Dependence of Electricity Price Curves with Warping Functional Autoregressive Dynamics" by The Annals of Applied Statistics in 2019.
+The electricity price data from two power markets are used: (1) the Nord Pool market from 2013.01.01 to 2017.12.31, via WFAR.m (2) the California market from 1999.07.05 to 2001.01.31, via WFAR_CA.m. This code was originally published with the paper: "Modeling Seasonality and Serial Dependence of Electricity Price Curves with Warping Functional Autoregressive Dynamics" by The Annals of Applied Statistics in 2019.
 
 Here's a breakdown of what the code does.
 
