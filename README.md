@@ -1,7 +1,7 @@
 
 ---
 
-# `coding_portfolio` contains the codes for three projects in its subfolders: WFAR_code, taxi_market_code, and CFPCA_code.
+# `PredictiveModels` contains the codes for three projects in its subfolders: WFAR_code, taxi_market_code, and CFPCA_code.
 
 ## Description  
 ### 1. WFAR_code (main function: WFAR.m – MATLAB code for Warping Functional AutoRegressive (WFAR) Model)  
