@@ -13,19 +13,19 @@ This project was funded and in collabration with LTA. The local taxi operators i
 
 ## Notable Features:
 
-### 0. Key Outputs (of AnalyseTransMktInefficiency_Stage1to3.RmD)
+### Key Outputs (of AnalyseTransMktInefficiency_Stage1to3.RmD)
 
-The analysis generates multiple CSV files with detailed metrics including:
- - 1. Percentage breakdowns of booking types (phone, TPB, street hail)
- - 2. Supply composition (local/foreign pickups, empty cruising, breaks)
- - 3. Inefficiency metrics by time of day and geographical area
+The RmD generates multiple CSV files with detailed metrics including:
+ - 1. **Percentage breakdowns of booking types** (phone, TPB, street hail)
+ - 2. **Supply composition** (local/foreign pickups, empty cruising, breaks)
+ - 3. **Inefficiency metrics by time of day and geographical area**
  - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
 **Technical Details for R programing performance optimization**
-1. Uses data.table for efficient large data processing
-2. Implements custom functions for status identification and metric calculation
-3. Processes data in batches to manage memory usage
-4. Handles warnings and missing data appropriately
+1. Uses **data.table** for efficient large data processing
+2. Implements **custom functions** for status identification and metric calculation
+3. **Processes data in batches** to manage memory usage
+4. Handles **warnings and missing data** appropriately
 
 ### 1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics
 - **Left empty**, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.
