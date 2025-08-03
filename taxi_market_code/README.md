@@ -22,10 +22,10 @@ The RmD generates multiple CSV files with detailed metrics including:
  - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
 **Technical Details for R programing performance optimization**
-1. Uses **data.table** for efficient large data processing
-2. Implements **custom functions** for status identification and metric calculation
-3. **Processes data in batches** to manage memory usage
-4. Handles **warnings and missing data** appropriately
+- Uses data.table for efficient large data processing
+- Implements custom functions for status identification and metric calculation
+- Processes data in batches to manage memory usage
+- Handles warnings and missing data appropriately
 
 ### 1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics
 - **Left empty**, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.
