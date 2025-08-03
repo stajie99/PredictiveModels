@@ -22,6 +22,7 @@ The RmD generates multiple CSV files with detailed metrics including:
  - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
 **Technical Details for R programing performance optimization**
+   ```r
 1. Vectorization
 2. Proper Data Structures
  - Use `data.table` instead of `data.frame` for large datasets (faster subsetting, grouping)
@@ -59,7 +60,7 @@ The RmD generates multiple CSV files with detailed metrics including:
 - **Large datasets**: Prioritize memory efficiency and data.table
 - **Complex computations**: Consider Rcpp and parallel processing
 - **Repetitive tasks**: Profile first, then optimize bottlenecks
-
+   ```
 ### 1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics
 - **Left empty**, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.
 - **Local empty**, binary
