@@ -5,13 +5,27 @@
 # AnalyseTransMktInefficiency_Stage1to3.Rmd 
 
 ## Project Overview
-This project partitions a day into sub-time-intervals and analyse the taxi drivers’ behaviours to shed light on Singapore local transport market efficiency in each sub-time-interval in a day.
+This project partitions a day into sub-time-intervals and analyse the taxi drivers’ behaviours to shed light on Singapore local transport market efficiency in each sub-time-interval in a day, providing comprehensive insights into the efficiency of Singapore's taxi market during 2016-2017, identifying temporal and spatial patterns of inefficiency.
 
 For the first time, by establishing the market inefficiency metrics with optimized calculation algorithm this project analyzes taxi operational statuses in each 5-minute intervals (288 intervals/day) across 170,478 unique taxi IDs operating in Singapore during 2015-01-01 to 2017-06-30.
 
 This project was funded and in collabration with LTA. The local taxi operators involved in the analyzed taxi data are: CDG, Premier, SMRT, TransCab. (All the data used are unfortunately not accessible now for confidential reason.) Here's a breakdown of what the script does.
 
 ## Notable Features:
+
+### 0. Key Outputs (of AnalyseTransMktInefficiency_Stage1to3.RmD)
+
+The analysis generates multiple CSV files with detailed metrics including:
+#### Percentage breakdowns of booking types (phone, TPB, street hail)
+#### Supply composition (local/foreign pickups, empty cruising, breaks)
+#### Inefficiency metrics by time of day and geographical area
+#### Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
+
+**Technical Details for R programing performance optimization**
+1. Uses data.table for efficient large data processing
+2. Implements custom functions for status identification and metric calculation
+3. Processes data in batches to manage memory usage
+4. Handles warnings and missing data appropriately
 
 ### 1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics
 - **Left empty**, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.
