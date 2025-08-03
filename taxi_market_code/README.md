@@ -16,10 +16,10 @@ This project was funded and in collabration with LTA. The local taxi operators i
 ### 0. Key Outputs (of AnalyseTransMktInefficiency_Stage1to3.RmD)
 
 The analysis generates multiple CSV files with detailed metrics including:
-#### Percentage breakdowns of booking types (phone, TPB, street hail)
-#### Supply composition (local/foreign pickups, empty cruising, breaks)
-#### Inefficiency metrics by time of day and geographical area
-#### Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
+ - 1. Percentage breakdowns of booking types (phone, TPB, street hail)
+ - 2. Supply composition (local/foreign pickups, empty cruising, breaks)
+ - 3. Inefficiency metrics by time of day and geographical area
+ - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
 **Technical Details for R programing performance optimization**
 1. Uses data.table for efficient large data processing
