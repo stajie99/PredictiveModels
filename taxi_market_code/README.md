@@ -22,10 +22,71 @@ The RmD generates multiple CSV files with detailed metrics including:
  - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
 **Technical Details for R programing performance optimization**
-- Uses data.table for efficient large data processing
-- Implements custom functions for status identification and metric calculation
-- Processes data in batches to manage memory usage
-- Handles warnings and missing data appropriately
+ 1. Vectorization
+ 2. Proper Data Structures
+- Use `data.table` instead of `data.frame` for large datasets (faster subsetting, grouping)
+- For matrices, use `matrix` instead of `data.frame` when appropriate
+- Consider `sparseMatrix` from Matrix package for sparse data
+ 3. Memory Management
+- Remove unused objects with `rm()`
+- Use `gc()` to trigger garbage collection
+- Pre-allocate memory for objects that will grow (vectors, matrices, lists)
+- Avoid growing objects in loops (this creates copies)
+ 4. Efficient Looping
+- When loops are necessary:
+  - Use `lapply()`/`sapply()` instead of `for` where possible
+  - For `for` loops, pre-allocate results
+ 5. Parallel Processing
+- Use `parallel` package (mclapply, parLapply)
+- Consider `foreach` with doParallel/doMC backends
+- For embarrassingly parallel problems, use `future.apply`
+
+ 6. Profiling & Benchmarking
+- Profile with `Rprof()` and `summaryRprof()`
+- Benchmark with `microbenchmark` package
+- Use `profvis` for visual profiling
+
+ 7. I/O Optimization
+- Use `fread()` from data.table for fast file reading
+- For R objects, use `saveRDS()`/`readRDS()` instead of `save()`/`load()`
+- Consider feather/arrow formats for large datasets
+- Use database connections (RSQLite, etc.) for data too big for memory
+
+ 8. Algorithm Selection
+- Choose appropriate algorithms (O(n) vs O(n²))
+- Use hash-based lookups via environments when appropriate
+- Consider approximate methods for large datasets (e.g., `bigmemory` package)
+
+ 9. Just-In-Time Compilation
+- Enable with `compiler::enableJIT(3)`
+- Use `compiler::cmpfun()` to compile specific functions
+
+ 10. Package-Specific Optimizations
+- For data.table: proper use of keys and binary search
+- For dplyr: avoid piping when performance is critical
+- Use specialized packages for large data (bigmemory, ff, etc.)
+
+ 11. Avoid Common Bottlenecks
+- Don't use `attach()`
+- Minimize copying with `:=` in data.table
+- Avoid `cbind()`/`rbind()` in loops
+- Be cautious with `apply()` on data.frames (can be slow)
+
+ 12. C++ Integration
+- Use Rcpp for performance-critical sections
+- Consider RcppArmadillo for linear algebra
+- RcppParallel for parallel C++ code
+
+ 13. System-Level Optimization
+- Increase memory limits with `memory.limit()`
+- Use optimized BLAS/LAPACK libraries
+- Consider running on 64-bit R for large datasets
+
+ When to Apply What:
+- Small-medium datasets: Focus on vectorization and proper data structures
+- Large datasets: Prioritize memory efficiency and data.table
+- Complex computations: Consider Rcpp and parallel processing
+- Repetitive tasks: Profile first, then optimize bottlenecks
 
 ### 1. Noval Analysis Framework of Taxi Status Types and Market Inefficiency Metrics
 - **Left empty**, a binary variable takes 1 if the taxi left its last dropping off area empty and made a subsequent pick up in a different area in less than or equal to 60 minutes, otherwise 0.
