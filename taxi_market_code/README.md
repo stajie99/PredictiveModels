@@ -21,7 +21,7 @@ The RmD generates multiple CSV files with detailed metrics including:
  - 3. **Inefficiency metrics by time of day and geographical area**
  - 4. Both short-form (friction+mismatch) and long-form (including efficient pickups) analyses
 
-**Technical Details for R programing performance optimization**
+#### **Technical Details for R programing performance optimization**
    ```r
 1. Vectorization
 2. Proper Data Structures
