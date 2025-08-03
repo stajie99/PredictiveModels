@@ -13,7 +13,7 @@ This project was funded and in collabration with LTA. The local taxi operators i
 
 ## Notable Features:
 
-### Key Outputs (of AnalyseTransMktInefficiency_Stage1to3.RmD)
+### Key Outputs (AnalyseTransMktInefficiency_Stage1to3.RmD)
 
 The RmD generates multiple CSV files with detailed metrics including:
  - 1. **Percentage breakdowns of booking types** (phone, TPB, street hail)
