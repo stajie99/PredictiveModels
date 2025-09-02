@@ -45,14 +45,14 @@ option_sparam = 25;
 option_showplot = 0;
 t    = [1:1:M]'; 
 %% do time warping
-%% gam is daily warping function
-[~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
-% [KM_gam, ~] = KarcherMeansOf_warpingfunctions(gam')' %%, firstday_inwindow_dayno); % KM_gam is 7 by M, estimated fixed warping functions
-
-KM_gam = gam';
-% KM_gam = repmat(KM_gam, floor((N_forecast+wz)/7), 1); %repeat copies of a matrix into a ** by 1 block arrangement
-% KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];  % KM_gam is N_forecast+wz by 1 now, containing the estimated fixed warping functions.
-%%
+% %% gam is daily warping function
+% [~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
+% % [KM_gam, ~] = KarcherMeansOf_warpingfunctions(gam')' %%, firstday_inwindow_dayno); % KM_gam is 7 by M, estimated fixed warping functions
+% 
+% KM_gam = gam';
+% % KM_gam = repmat(KM_gam, floor((N_forecast+wz)/7), 1); %repeat copies of a matrix into a ** by 1 block arrangement
+% % KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];  % KM_gam is N_forecast+wz by 1 now, containing the estimated fixed warping functions.
+% %%
 % prepare for scaled time ticks, no. of basis, and totalK
         electime=1:M;
         electimescaled=zeros(M,1);
@@ -67,12 +67,15 @@ CAfd_o_forcvalFAR1315 = [];
 for ind=(train_sample+step):(N)
     ind
     %%%%%% fix rolling window wz %%%%%%%
+    %% gam is daily warping function
+    [~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
+    KM_gam = gam';
         %%  1.time warping
         f_wz = f(:,ind-step-wz+1:ind-step); % prices in the rolling window
         fn=zeros(M,wz); % for warped prices
         for i=1:wz
             i;
-            fn(:,i) = interp1(t, f_wz(:,i), (t(end)-t(1)).*KM_gam(ind-(train_sample+step)+i, :) + t(1))'; % time warping with fixed warping function
+            fn(:,i) = interp1(t, f_wz(:,i), (t(end)-t(1)).*KM_gam(i, :) + t(1))'; % time warping with fixed warping function
         end
        
         %% 2.FAR  
@@ -100,19 +103,25 @@ for ind=(train_sample+step):(N)
         CAfd_forcvalFAR_1315=eval_fd(electimescaled,CAfd_forcFAR_1315);%24x1 discrete forecasted values? for RMSE
         %% 2.3 warp back
          % the inverse of the warping function matrix gam
-        gam=KM_gam; %%(:, ind-(train_sample+step)+step+wz);
+        gam=Jiejie_SqrtMean(KM_gam);
         m = M;
         x = (0:m-1)/(m-1); % N uniform distribution points on (0,1)
+        % inserted for commodity
         gamI = zeros(1,m); %train_sample*24
-                gamI(1,:) = interp1(gam(1,:),x,x); % interpolated values of x(gam is sample points, x are values)
+        % for i=1:wz
+        %     i;
+            gamI(1,:) = interp1(gam(1,:),x,x); % interpolated values of x(gam is sample points, x are values)
                                  %at specific query points using linear interpolation
-                if isnan(gamI(1,m))
+            if isnan(gamI(1,m))
                 gamI(1,m) = 1;
-                else
+            else
                     for j=1:m
                     gamI(1,j) = gamI(1,j)./gamI(1,m);
                     end
-                end
+            end
+        % end
+        % end of insertion
+                
         KM_gamI=gamI; % the inverse of the warping function matrix gam, length(CAfd_forcvalFAR300) by 24    
         CAfd_o_forcvalFAR_1315_7 = interp1(t, CAfd_forcvalFAR_1315, (t(end)-t(1)).*KM_gamI + t(1))'; 
         CAfd_o_forcvalFAR1315 = [CAfd_o_forcvalFAR1315 CAfd_o_forcvalFAR_1315_7];
@@ -122,13 +131,34 @@ end
     t_index=(train_sample+step):(N);     % t for forcasted prices
     CAfd_forcvalFAR=CAfd_o_forcvalFAR1315;%(:,t_index); % forcasted price matrix
     err_forcvalWFAR = CAfd_forcvalFAR-f(:,t_index);
-    RMSEforcvalWFAR_KM=sqrt(mean(err_forcvalWFAR.^2, 2)); % Root Mean Square Error
-    eWFAR = err_forcvalWFAR(:) 
-    eWFARvec = mean(err_forcvalWFAR, 1); % err_forcvalFAR(:) % vectorized forecasted errors
+    RMSEforcvalWFAR_KM=sqrt(mean(err_forcvalWFAR.^2, 2)) % Root Mean Square Error
+    % eWFAR = err_forcvalWFAR(:); 
+    % eWFARvec = mean(err_forcvalWFAR, 1); % err_forcvalFAR(:) % vectorized forecasted errors
 
 
-%% combine RMSE matrix of WFAR model and alternative models
-RMSE_NP = [RMSEforcvalWFAR_KM];
+% %% combine RMSE matrix of WFAR model and alternative models
+% RMSE_NP = [RMSEforcvalWFAR_KM];
+% 
+% %% Diebold Mariano test
+% save('WFAR_NP.mat', 'RMSE_NP')
 
-%% Diebold Mariano test
-save('WFAR_NP.mat', 'RMSE_NP')
+
+%% plot
+yhat = CAfd_forcvalFAR(:);
+y = f(:,t_index);
+y = y(:);
+x = 1:length(y);
+
+% Create the plot
+figure;
+plot(x, y, 'bo-', 'LineWidth', 1.5, 'MarkerSize', 8, 'DisplayName', 'True Values');
+hold on;
+plot(x, yhat, 'rx--', 'LineWidth', 1.5, 'MarkerSize', 8, 'DisplayName', 'Predicted Values');
+hold off;
+
+% Add labels and legend
+xlabel('Sample Index');
+ylabel('Values');
+title('True vs Predicted Values');
+legend('show');
+grid on;
