@@ -165,8 +165,8 @@ plot(x, yhat, 'rx--', 'LineWidth', 1.5, 'MarkerSize', 8, 'DisplayName', 'Predict
 hold off;
 
 % Add labels and legend
-xlabel('Sample Index');
-ylabel('Values');
-title('True vs Predicted Values');
+xlabel('Date');
+ylabel('Price');
+title('True Values vs Predicted Values of Iron Ore global prices');
 legend('show');
 grid on;
