@@ -24,8 +24,8 @@ fwhole = table2array(fwhole);
 step=1;
 %% take log10(.+1) to avoid the impact of extreme spikes and deal with 0 prices
 %% fwhole=log10(fwhole+1);
-%% no. of observations per day
-M=12; %%24; 
+%% no. of observations per year
+M= 12;%% 24; 
 flog = fwhole;
 f = reshape(flog, M, []); % reshape vector to matrix
 N    = size(flog, 1)/M; 
@@ -60,7 +60,7 @@ t    = [1:1:M]';
             electimescaled(i)=electime(i)/M;
         end
         %Create the fd objects by fourier transformation        
-        CAnbasis = 11;%% 23;
+        CAnbasis = M-1; %23;
         totalK=(CAnbasis-1)/2;
 %%  ------------------------------------WFAR ----------------------------------
 CAfd_o_forcvalFAR1315 = [];
@@ -144,10 +144,18 @@ end
 
 
 %% plot
+opts = detectImportOptions('210720_iron_ore_RAW.csv');
+opts.SelectedVariableNames = {'DATE'};
+x = readtable('210720_iron_ore_RAW.csv', opts);  % No parameter name needed
+x(any(ismissing(x), 2), :) = [];
+x = table2array(x);
+
+% x = reshape(x, M, []); % reshape vector to matrix
+x = x(((train_sample+step-1)*M+1) : N*M);
+
 yhat = CAfd_forcvalFAR(:);
 y = f(:,t_index);
 y = y(:);
-x = 1:length(y);
 
 % Create the plot
 figure;

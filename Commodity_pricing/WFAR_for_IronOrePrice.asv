@@ -15,26 +15,26 @@ addpath(genpath('fdaM'))
 addpath(genpath('data'))
 %% input consolidated price data
 opts = detectImportOptions('210720_iron_ore_RAW.csv');
-opts.SelectedVariableNames = {'DATE', ''};
-fwhole = readmatrix('', opts);  % No parameter name needed
-matrixDat = readmatrix('210720_iron_ore_RAW.csv.csv', 'Range', ['DATE:DATE', 'GlobalPriceOfIronOre:GlobalPriceOfIronOre']);
+opts.SelectedVariableNames = {'GlobalPriceOfIronOre'};
+fwhole = readtable('210720_iron_ore_RAW.csv', opts);  % No parameter name needed
 fwhole(any(ismissing(fwhole), 2), :) = [];
+fwhole = table2array(fwhole);
 % load('electricity_prices.mat')
 %% forecasting step, i.e. 1-day ahead
 step=1;
 %% take log10(.+1) to avoid the impact of extreme spikes and deal with 0 prices
 %% fwhole=log10(fwhole+1);
-%% no. of observations per day
-M=12 %%24; 
+%% no. of observations per year
+M=6; %%12; %%24; 
 flog = fwhole;
 f = reshape(flog, M, []); % reshape vector to matrix
 N    = size(flog, 1)/M; 
-train_sample = 300;
-wz   = 30;%180;%60;%   % rolling window size
+train_sample = 5;
+wz   = 3;%180;%60;%   % rolling window size
 %% prepare prices and dates for time warping
 f_wz=f(:,train_sample-wz+1:train_sample);
 N_forecast = N-train_sample-step+1;
-[firstday_inwindow_dayno, firstday_inwindow_dayofweek] = weekday(datenum(fdatewhole(train_sample-wz+1),'dd/mm/yyyy'))
+% [firstday_inwindow_dayno, firstday_inwindow_dayofweek] = weekday(datenum(fdatewhole(train_sample-wz+1),'dd/mm/yyyy'))
 %% --------------------------time warping for fixed warping functions ------------------
 %% default values for warping parameters
 lambda = 0;
@@ -45,13 +45,14 @@ option_sparam = 25;
 option_showplot = 0;
 t    = [1:1:M]'; 
 %% do time warping
-%% gam is daily warping function
-[~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
-[KM_gam, ~] = KarcherMeansof_warpingfunctions(gam', firstday_inwindow_dayno); % KM_gam is 7 by M, estimated fixed warping functions
-
-KM_gam = repmat(KM_gam, floor((N_forecast+wz)/7), 1); %repeat copies of a matrix into a ** by 1 block arrangement
-KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];  % KM_gam is N_forecast+wz by 1 now, containing the estimated fixed warping functions.
-%%
+% %% gam is daily warping function
+% [~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
+% % [KM_gam, ~] = KarcherMeansOf_warpingfunctions(gam')' %%, firstday_inwindow_dayno); % KM_gam is 7 by M, estimated fixed warping functions
+% 
+% KM_gam = gam';
+% % KM_gam = repmat(KM_gam, floor((N_forecast+wz)/7), 1); %repeat copies of a matrix into a ** by 1 block arrangement
+% % KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];  % KM_gam is N_forecast+wz by 1 now, containing the estimated fixed warping functions.
+% %%
 % prepare for scaled time ticks, no. of basis, and totalK
         electime=1:M;
         electimescaled=zeros(M,1);
@@ -59,18 +60,22 @@ KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];  % KM_gam is N_forecast+wz 
             electimescaled(i)=electime(i)/M;
         end
         %Create the fd objects by fourier transformation        
-        CAnbasis = 23;
+        CAnbasis = 11;%% 23;
         totalK=(CAnbasis-1)/2;
 %%  ------------------------------------WFAR ----------------------------------
 CAfd_o_forcvalFAR1315 = [];
 for ind=(train_sample+step):(N)
+    ind
     %%%%%% fix rolling window wz %%%%%%%
+    %% gam is daily warping function
+    [~,~,~,~,~,gam,~,~] = time_warping1(f_wz,t,lambda,option_parallel,option_closepool,option_smooth,option_sparam,option_showplot); % gam is M by wz.
+    KM_gam = gam';
         %%  1.time warping
         f_wz = f(:,ind-step-wz+1:ind-step); % prices in the rolling window
         fn=zeros(M,wz); % for warped prices
         for i=1:wz
             i;
-            fn(:,i) = interp1(t, f_wz(:,i), (t(end)-t(1)).*KM_gam(ind-(train_sample+step)+i, :) + t(1))'; % time warping with fixed warping function
+            fn(:,i) = interp1(t, f_wz(:,i), (t(end)-t(1)).*KM_gam(i, :) + t(1))'; % time warping with fixed warping function
         end
        
         %% 2.FAR  
@@ -98,19 +103,25 @@ for ind=(train_sample+step):(N)
         CAfd_forcvalFAR_1315=eval_fd(electimescaled,CAfd_forcFAR_1315);%24x1 discrete forecasted values? for RMSE
         %% 2.3 warp back
          % the inverse of the warping function matrix gam
-        gam=KM_gam(ind-(train_sample+step)+step+wz,:);
+        gam=Jiejie_SqrtMean(KM_gam);
         m = M;
         x = (0:m-1)/(m-1); % N uniform distribution points on (0,1)
+        % inserted for commodity
         gamI = zeros(1,m); %train_sample*24
-                gamI(1,:) = interp1(gam(1,:),x,x); % interpolated values of x(gam is sample points, x are values)
+        % for i=1:wz
+        %     i;
+            gamI(1,:) = interp1(gam(1,:),x,x); % interpolated values of x(gam is sample points, x are values)
                                  %at specific query points using linear interpolation
-                if isnan(gamI(1,m))
+            if isnan(gamI(1,m))
                 gamI(1,m) = 1;
-                else
+            else
                     for j=1:m
                     gamI(1,j) = gamI(1,j)./gamI(1,m);
                     end
-                end
+            end
+        % end
+        % end of insertion
+                
         KM_gamI=gamI; % the inverse of the warping function matrix gam, length(CAfd_forcvalFAR300) by 24    
         CAfd_o_forcvalFAR_1315_7 = interp1(t, CAfd_forcvalFAR_1315, (t(end)-t(1)).*KM_gamI + t(1))'; 
         CAfd_o_forcvalFAR1315 = [CAfd_o_forcvalFAR1315 CAfd_o_forcvalFAR_1315_7];
@@ -120,13 +131,42 @@ end
     t_index=(train_sample+step):(N);     % t for forcasted prices
     CAfd_forcvalFAR=CAfd_o_forcvalFAR1315;%(:,t_index); % forcasted price matrix
     err_forcvalWFAR = CAfd_forcvalFAR-f(:,t_index);
-    RMSEforcvalWFAR_KM=sqrt(mean(err_forcvalWFAR.^2, 2)); % Root Mean Square Error
-    eWFAR = err_forcvalWFAR(:) 
-    eWFARvec = mean(err_forcvalWFAR, 1); % err_forcvalFAR(:) % vectorized forecasted errors
+    RMSEforcvalWFAR_KM=sqrt(mean(err_forcvalWFAR.^2, 2)) % Root Mean Square Error
+    % eWFAR = err_forcvalWFAR(:); 
+    % eWFARvec = mean(err_forcvalWFAR, 1); % err_forcvalFAR(:) % vectorized forecasted errors
 
 
-%% combine RMSE matrix of WFAR model and alternative models
-RMSE_NP = [RMSEforcvalWFAR_KM];
+% %% combine RMSE matrix of WFAR model and alternative models
+% RMSE_NP = [RMSEforcvalWFAR_KM];
+% 
+% %% Diebold Mariano test
+% save('WFAR_NP.mat', 'RMSE_NP')
 
-%% Diebold Mariano test
-save('WFAR_NP.mat', 'RMSE_NP')
+
+%% plot
+opts = detectImportOptions('210720_iron_ore_RAW.csv');
+opts.SelectedVariableNames = {'DATE'};
+x = readtable('210720_iron_ore_RAW.csv', opts);  % No parameter name needed
+x(any(ismissing(x), 2), :) = [];
+x = table2array(x);
+
+% x = reshape(x, M, []); % reshape vector to matrix
+x = x(((train_sample+step-1)*M+1) : N*M);
+
+yhat = CAfd_forcvalFAR(:);
+y = f(:,t_index);
+y = y(:);
+
+% Create the plot
+figure;
+plot(x, y, 'bo-', 'LineWidth', 1.5, 'MarkerSize', 8, 'DisplayName', 'True Values');
+hold on;
+plot(x, yhat, 'rx--', 'LineWidth', 1.5, 'MarkerSize', 8, 'DisplayName', 'Predicted Values');
+hold off;
+
+% Add labels and legend
+xlabel('Sample Index');
+ylabel('Values');
+title('True vs Predicted Values');
+legend('show');
+grid on;
