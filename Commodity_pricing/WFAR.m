@@ -29,6 +29,8 @@ wz   = 30;%180;%60;%   % rolling window size
 %% prepare prices and dates for time warping
 f_wz=f(:,train_sample-wz+1:train_sample);
 N_forecast = N-train_sample-step+1;
+% % Get current day number and day of week
+% [dayNum, dayName] = weekday(now);
 [firstday_inwindow_dayno, firstday_inwindow_dayofweek] = weekday(datenum(fdatewhole(train_sample-wz+1),'dd/mm/yyyy'))
 %% --------------------------time warping for fixed warping functions ------------------
 %% default values for warping parameters
