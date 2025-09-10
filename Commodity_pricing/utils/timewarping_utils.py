@@ -1,21 +1,48 @@
-# RMSE of WFAR, FAR, VAR, AR, AR*, SAR, ARX and ARX* models 
-# % Input: electricity price data of Nord Pool market in 2013/01/01-2017/12/31
-# % Output: WFAR_NP.mat including
-# %              1. RMSE_NP:  RMSE matrix (M by 8, M=24 i.e. hourly) of the above 8 models
-# %              2. DM: the DM statistics           
-# %              3. DMvec: the multivariate DM statistics 
-
-# % References:
-# % Uniejewski, B., Weron, R. and Ziel, F. (2018). Variance stabilizing transformations for electricity spot price forecasting, IEEE Transactions on Power Systems 33(2): 2219�C2229.
-# % Ziel F. and Weron R. (2018). Day-ahead electricity price forecasting with high dimensional structures: Univariate vs. multivariate models, Energy Economics 70: 396�C420.
-
-# Creat by Jiejie Zhang, last modified on 2018.10.03
-
-# Translated from Matlab to Python by Jiejie Zhang, last modified on 2025.09.09
-
-# 1. Create fdaM functions folder
-# 2. Prepare input consilidated price data of Nord Pool market.
 import numpy as np
 import pandas as pd
-import scipy.io
-from datetime import datetime, date, timedelta
+
+def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smooth=0,option_sparam=25,option_showplot=1):
+    # % default options
+    # % option.parallel = 0; % turns offs MATLAB parallel processing (need
+    # % parallel processing toolbox)
+    # % option.closepool = 0; % determines wether to close matlabpool
+    # % option.smooth = 0; % smooth data using standard box filter
+    # % option.sparam = 25; % number of times to run filter
+    # % option.showplot = 1; % turns on and off plotting
+    option = {
+        'parallel': option_parallel,
+        'closepool': option_closepool,
+        'smooth': option_smooth,
+        'sparam': option_sparam,
+        'showplot': option_showplot
+    }
+    # enture t is a numpy array
+    if not isinstance(t, np.ndarray):
+        t = np.array(t)
+    # ensure f is a numpy array
+    if not isinstance(f, np.ndarray):
+        f = np.array(f)
+    # handle 1d arrays
+    if t.ndim == 1:
+        t = t.reshape(-1, 1) # make it a 2d column vector
+    
+    a = t.shape[0]
+    if a != 1:
+        t = t.T # requires t to be a row vector
+    # handle edge case where t has only 1 element
+    if len(t.flatten()) > 1:
+        binsize = np.mean(np.diff(t.flatten()))
+    else:
+        binsize = 0 # or np.nan, depending on needs
+    
+    M, N = f.shape
+    f0 = f.copy()
+
+    
+
+
+
+
+
+    return fn,qn,q0,fmean,mqn,gam,psi,stats
+
