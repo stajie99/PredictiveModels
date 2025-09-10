@@ -38,7 +38,9 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     M, N = f.shape
     f0 = f.copy()
 
-    
+    # choose to smooth f or not
+    f = smooth_f(f, option)
+
 
 
 
@@ -46,3 +48,16 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
 
     return fn,qn,q0,fmean,mqn,gam,psi,stats
 
+def smooth_f(f, option):
+    # smoothing with proper edge handling
+    if option['smooth'] != 1:
+        return f.copy()
+    
+    M, N = f.shape
+    f_smoothed = f.copy()
+    for r in range(option['sparam']):
+        # for interior points
+        if M>2:
+            f_smoothed[1:M-1, :] = (f_smoothed[0:M-2, :] + 2 * f_smoothed[1:M-1, :] + f_smoothed[2:M, :]) / 4
+
+    return f_smoothed
