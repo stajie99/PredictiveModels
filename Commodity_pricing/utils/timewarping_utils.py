@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import ndimage
+from scipy.interpolate import interpld
 
 def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smooth=0,option_sparam=25,option_showplot=1):
     # % default options
@@ -21,7 +24,7 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
         t = np.array(t)
     # ensure f is a numpy array
     if not isinstance(f, np.ndarray):
-        f = np.array(f)
+        f = np.array(f) # M by N
     # handle 1d arrays
     if t.ndim == 1:
         t = t.reshape(-1, 1) # make it a 2d column vector
@@ -40,6 +43,35 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
 
     # choose to smooth f or not
     f = smooth_f(f, option)
+    # choose to plot f or not
+    if option['showplot'] == 1:
+        plt.figure(1)
+        plt.clf()
+        plt.plot(t, f)
+        plt.title('Original data')
+        plt.pause(0.1)
+
+
+    # 1. Compute the q-function of the plot
+    fy = calculate_gradient(f, binsize)
+    q = calculate_q(fy)
+
+    # 2. Initialization using the original f space
+    # 2.1 Calculate mean along rows (horizontal): axis=1
+    mnq = np.mean(q, axis=1)
+    # 2.2 Calculate Euclidean distances from each column to the mean mnq
+    #   i.e. sqrt(sum((q - mnq*one(1, N)).^2, 1))
+    dis_qq = np.sqrt(np.sum((q - mnq[:, np.newasis])**2, axis=0))  #Expand the mean column: Instead of explicitly creating a matrix of ones, we use broadcasting by adding a new axis to make mnq a column vector.
+    # 2.3 Find the index (day/column) of minimum distance
+    min_ind = np.argmin(dis_qq)
+    #     Extract the column with minimum distance
+    mq = q[:, min_ind]
+    mf = f[:, min_ind]
+    # Finish initialization
+
+    gam =
+
+
 
 
 
@@ -61,3 +93,28 @@ def smooth_f(f, option):
             f_smoothed[1:M-1, :] = (f_smoothed[0:M-2, :] + 2 * f_smoothed[1:M-1, :] + f_smoothed[2:M, :]) / 4
 
     return f_smoothed
+
+def calculate_gradient(f, binsize):
+    # parameters:
+    # f: numpy array
+        # input array (2d typically)
+    # binsize: float
+        # spacing between points
+    # returns:
+        # fy: numpy array
+            # vertical gradient (derivative along columns)
+    fy = np.gradient(f, binsize, axis = 1)
+    return fy
+
+def calculate_q(fy):
+    # calculate q = fy / sqrt(|fy| + eps)
+    # parameters:
+    # fy: numpy array
+        # gradient values
+    # returns:
+        # q: numpy array
+            # Normalized gradient values
+    eps = np.finfo(float).eps # machine epsilon for numerical stability
+    q = fy / np.sqrt(np.abs(fy) + eps)
+    
+    return q
