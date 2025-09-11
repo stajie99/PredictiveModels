@@ -69,9 +69,36 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     mf = f[:, min_ind]
     # Finish initialization
 
-    gam =
+    # Side facts:
+    #   q: numpy array of shape (features, N, time_points) or similar
+    #   mq: numpy array
+    #   t: time vector of length M
+    #   binsize: scalar value
+    #   M: number of time points
+    #   N: number of samples
+    gam = np.zeros((N, q.shape[0]))
+    for k in range(N):
+        q_c = q[:, k, 0].T # extract k-th sample, first time/interplation point
+        mq_c = mq.T
 
+        # np.linalg.norm(mq_c)： L2 norm for vectors
+        G, T = DynamicProgrammingQ2(mq_c / np.linalg.norm(mq_c), t, q_c / np.linalg.norm(q_c), t, t, t)
 
+        # Interpolate
+        gam0 = interpld(T, G, kind='linear', fill_value='extrapolate')(t)
+        # Normaliza
+        gam[k, :] = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])  # slight change on scale
+
+        gamI = SqrtMeanInverse(gam)
+
+        # Compute gradiant 
+        dt = 1 / (M - 1)
+        gamI_dev = np.gradient(gamI, dt)
+
+        # Interpolate mf using the warping function
+        mf_interpolated = interpld(t, mf, kind='linear', fill_value='extrapolate')(
+            (t[-1] - t[0]) * gamI + t[0]
+        ).T
 
 
 
