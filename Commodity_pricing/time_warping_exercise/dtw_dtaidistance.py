@@ -1,4 +1,5 @@
 import numpy as np
+# python -m pip install dtaidistance
 from dtaidistance import dtw
 from dtaidistance import dtw_visualisation as dtwviz
 
@@ -13,6 +14,8 @@ print(f"DTW Distance: {distance}")
 # Get the full distance matrix
 distance_matrix = dtw.distance_matrix(np.array([series1, series2]))
 print(f"Distance Matrix:\n{distance_matrix}")
+# NameError: name 'distance_matrix' is not defined
+
 
 # Visualize the warping path
 path = dtw.warping_path(series1, series2)
