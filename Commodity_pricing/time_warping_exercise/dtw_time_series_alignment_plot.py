@@ -1,3 +1,4 @@
+# AttributeError: 'function' object has no attribute 'warping_path
 import numpy as np
 import matplotlib.pyplot as plt
 from tslearn.metrics import dtw, dtw_path

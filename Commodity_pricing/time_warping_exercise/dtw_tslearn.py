@@ -1,3 +1,6 @@
+# not working yet
+# File "D:\Python\Lib\site-packages\tslearn\metrics\dtw_variants.py", line 807, in dtw
+    # return _njit_dtw(s1, s2, mask=mask)
 import numpy as np
 from tslearn.metrics import dtw, dtw_path
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
