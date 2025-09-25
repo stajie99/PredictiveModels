@@ -124,7 +124,9 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
 
 
         #### Compute Karcher Mean in SRVF (Square-Root Velocity Function) space with dynamic time warping
-
+        # return mq[:, r+2], q_evolution[:, :, r+2], f_evolution[:, :, r+2], q[:, :, 0], f[:, :, 0], ds
+        ## Aligned data & stats
+        mq_n, q_n, f_n, q0, f0, ds = compute_karcher_mean_f(q, f, t, lambda_val, MaxItr=30, tol=1e-2)
         
 
 
@@ -291,7 +293,7 @@ def invertGamma(gam):
     return gamI 
 
 
-def compute_karcher_mean_f(q, f, t, lambda_val, MaxItr=30, tol=1e-2):
+def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
     # Compute Karcher mean of functions in SRVF space
     # Parameters:
     #   q: numpy array of shape (M, N)
@@ -389,5 +391,48 @@ def compute_karcher_mean_f(q, f, t, lambda_val, MaxItr=30, tol=1e-2):
         if qun[r] < tol or r >= MaxItr -1:
             break
 
-    return mq[:, :r+2], q_evolution, f_evolution, ds
+        ## return mq[:, :r+2], q_evolution, f_evolution, ds
+
+
+        r = r + 1
+        # Sequential processing
+        for k in range(N):
+            q_c = q[:, k, 0].T
+            mq_c = mq[:, r+1].T
+            
+            ts1 = mq_c / np.linalg.norm(mq_c)
+            ts2 = q_c / np.linalg.norm(q_c)
+            
+            distance, gam0 = fastdtw(ts1.reshape(-1, 1), 
+                                    ts2.reshape(-1, 1), 
+                                    dist=euclidean)
+            
+            gam[k, :] = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])  # slight change on scale
+            gam_dev[k, :] = np.gradient(gam[k, :], 1/(M-1))
+
+        gamI = SqrtMeanInverse(gam)
+        gamI_dev = np.gradient(gamI, 1/(M-1))
+
+        # Interpolate mq
+        new_t_mq = (t[-1] - t[0]) * gamI + t[0]
+        mq_interp = interp1d(t, mq[:, r+1], kind='linear', axis=0, fill_value='extrapolate')
+        mq[:, r+2] = (mq_interp(new_t_mq) * np.sqrt(gamI_dev)).T
+
+        # Process each k
+        for k in range(N):
+            # Interpolate q
+            new_t = (t[-1] - t[0]) * gamI + t[0]
+            
+            q_interp = interp1d(t, q_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
+            q_evolution[:, k, r+2] = (q_interp(new_t) * np.sqrt(gamI_dev)).T
+            
+            # Interpolate f
+            f_interp = interp1d(t, f_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
+            f_evolution[:, k, r+2] = f_interp(new_t).T
+            
+            # Interpolate gam
+            gam_interp = interp1d(t, gam[k, :], kind='linear', fill_value='extrapolate')
+            gam[k, :] = gam_interp(new_t)
+
+    return mq[:, r+2], q_evolution[:, :, r+2], f_evolution[:, :, r+2], q[:, :, 0], f[:, :, 0], ds
 
