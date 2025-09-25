@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 from scipy.integrate import simps
+from scipy.integrate import trapz, cumtrapz
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -126,14 +127,47 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
         #### Compute Karcher Mean in SRVF (Square-Root Velocity Function) space with dynamic time warping
         # return mq[:, r+2], q_evolution[:, :, r+2], f_evolution[:, :, r+2], q[:, :, 0], f[:, :, 0], ds
         ## Aligned data & stats
-        mq_n, q_n, f_n, q0, f0, ds = compute_karcher_mean_f(q, f, t, lambda_val, MaxItr=30, tol=1e-2)
+        mq_n, q_n, f_n, q0, f0, ds = compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2)
         
+        mean_f0 = np.mean(f0, axis=1)
+        std_f0 = np.std(f0, axis=1, ddof=0)
+        mean_fn = np.mean(f_n, axis=1)
+        std_fn = np.std(f_n, axis=1, ddof=0)
+        fmean = mean_f0[0] + cumtrapz(t, mq_n * np.abs(mq_n), initial=0)
+
+        # Initializa fgam and interpolate
+        fgam = np.zeros((M, N))
+        for ii in range(N):
+            # create new time points for interpolation
+            new_t = (t[-1] - t[0]) * gam[ii, :] + t[0]
+
+            # interpolate fmean at new time points
+            f_interp = interp1d(t, fmean, kind='linear', fill_value='extrapolate')
+            fgam[:, ii] = f_interp(new_t)
+
+            # calculate variance along axis 1 (across columns)
+            var_fgam = np.var(fgam, axis=1, ddof=0)
+
+            # calculate statistics
+            stats={}
+            stats['orig_var'] = trapz(t, std_f0**2)
+            stats['amp_var'] = trapz(t, std_fn**2)
+            stats['phase_var'] = trapz(t, var_fgam)
+
+            # tramspose gam and compute gradient
+            gam = gam.T
+            binsize = t[1] - t[0]
+
+            # compute gradient
+            fy = np.gradient(gam, binsize, axis=0) # gradient along rows (time axis)
+
+            # calculate psi
+            psi = np.sqrt(fy + np.finfo(float).eps)
 
 
+            
 
-
-
-    return fn,qn,q0,fmean,mqn,gam,psi,stats
+    return f_n, q_n, q0, fmean, mq_n, gam, psi, stats
 
 def smooth_f(f, option):
     # smoothing with proper edge handling
