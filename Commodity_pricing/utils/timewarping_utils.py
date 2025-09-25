@@ -164,11 +164,59 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     # calculate psi
     psi = np.sqrt(fy + np.finfo(float).eps)
 
+    if option.showplot == 1:
+        # Create normalized x-axis for warping functions (0 to 1)
+        x_norm = np.arrange(M) / (M - 1)
+        # Figure 2: Warping functions
+        plt.figure(2)
+        plt.clf()
+        # Transpose gam to plot each column as a line
+        plt.plot(x_norm, gam.T, linewidth=1) 
+        plt.axis('square')
+        plt.title('Warping functions', fontsize=16)
+        plt.xlabel('Normalized time')
+        plt.ylabel('r(t)')
 
+        # Figure 3: Warped data
+        plt.figure(3)
+        plt.clf()
+        plt.plot(t, f_n, linewidth=1)
+        plt.title(f'Warped data', fontsize=16)
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude')
 
+        # Figure 4: Original data with mean +/- STD
+        plt.figure(4)
+        plt.clf()
+        plt.plot(t, mean_f0, 'b-', linewidth=1, label='Mean')
+        plt.plot(t, mean_f0 + std_f0, 'r-', linewidth=1, label='Mean + STD')
+        plt.plot(t, mean_f0 - std_f0, 'g-', linewidth=1, label='Mean - STD')
+        plt.title('Original data: Mean +/- STD', fontsize=16)
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude')
+        plt.legend()
 
+        # Figure 5: Warped data with mean +/- STD
+        plt.figure(5)
+        plt.clf()
+        plt.plot(t, mean_fn, 'b-', linewidth=1, label='Mean')
+        plt.plot(t, mean_fn + std_fn, 'r-', linewidth=1, label='Mean + STD')
+        plt.plot(t, mean_fn - std_fn, 'g-', linewidth=1, label='Mean - STD')
+        plt.title(f'Warped data: Mean +/- STD', fontsize=16)
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude')
+        plt.legend()
 
+        # Figure 6: f_mean
+        plt.figure(6)
+        plt.clf()
+        plt.plot(t, fmean, 'g', linewidth=1)
+        plt.title(f'f_mean', fontsize=16)
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude')
 
+        # Show all plots
+        plt.show()
 
     return f_n, q_n, q0, fmean, mq_n, gam, psi, stats
 
