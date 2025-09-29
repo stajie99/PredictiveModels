@@ -6,13 +6,28 @@ from scipy.interpolate import interp1d
 # import matlab.engine
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
-from scipy.integrate import simps
-from scipy.integrate import trapz, cumtrapz
+from scipy.integrate import simpson
+from scipy.integrate import trapezoid, cumulative_trapezoid
 import warnings
 warnings.filterwarnings('ignore')
 
+def main():
+    result = timewarping1()
+    return result
 
-def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smooth=0,option_sparam=25,option_showplot=1):
+if __name__ == "__main__":
+    main()  # Run as script: python timewarping_utils.py
+# Another script can import and use functions:
+# from timewarping_utils import timewarping1
+
+
+
+def timewarping1(f,t,lambda_=0,
+                 option_parallel=1,
+                 option_closepool=0,
+                 option_smooth=0,
+                 option_sparam=25,
+                 option_showplot=1):
     # % default options
     # % option.parallel = 0; % turns offs MATLAB parallel processing (need
     # % parallel processing toolbox)
@@ -27,6 +42,7 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
         'sparam': option_sparam,
         'showplot': option_showplot
     }
+
     # enture t is a numpy array
     if not isinstance(t, np.ndarray):
         t = np.array(t)
@@ -36,7 +52,7 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     # handle 1d arrays
     if t.ndim == 1:
         t = t.reshape(-1, 1) # make it a 2d column vector
-    
+
     a = t.shape[0]
     if a != 1:
         t = t.T # requires t to be a row vector
@@ -69,7 +85,7 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     mnq = np.mean(q, axis=1)
     # 2.2 Calculate Euclidean distances from each column to the mean mnq
     #   i.e. sqrt(sum((q - mnq*one(1, N)).^2, 1))
-    dis_qq = np.sqrt(np.sum((q - mnq[:, np.newasis])**2, axis=0))  #Expand the mean column: Instead of explicitly creating a matrix of ones, we use broadcasting by adding a new axis to make mnq a column vector.
+    dis_qq = np.sqrt(np.sum((q - mnq[:, np.newaxis])**2, axis=0))  #Expand the mean column: Instead of explicitly creating a matrix of ones, we use broadcasting by adding a new axis to make mnq a column vector.
     # 2.3 Find the index (day/column) of minimum distance
     min_ind = np.argmin(dis_qq)
     #     Extract the column with minimum distance
@@ -133,7 +149,7 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
     std_f0 = np.std(f0, axis=1, ddof=0)
     mean_fn = np.mean(f_n, axis=1)
     std_fn = np.std(f_n, axis=1, ddof=0)
-    fmean = mean_f0[0] + cumtrapz(t, mq_n * np.abs(mq_n), initial=0)
+    fmean = mean_f0[0] + cumulative_trapezoid(t, mq_n * np.abs(mq_n), initial=0)
 
     # Initializa fgam and interpolate
     fgam = np.zeros((M, N))
@@ -150,9 +166,9 @@ def timewarping1(f,t,lambda_=0,option_parallel=1,option_closepool=0,option_smoot
 
     # calculate statistics
     stats={}
-    stats['orig_var'] = trapz(t, std_f0**2)
-    stats['amp_var'] = trapz(t, std_fn**2)
-    stats['phase_var'] = trapz(t, var_fgam)
+    stats['orig_var'] = trapezoid(t, std_f0**2)
+    stats['amp_var'] = trapezoid(t, std_fn**2)
+    stats['phase_var'] = trapezoid(t, var_fgam)
 
     # tramspose gam and compute gradient
     gam = gam.T
@@ -321,7 +337,7 @@ def compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6):
         for i in range(n):
             v = psi[i,:] - mu
             # Inner product using Simpson intergration
-            dot1 = simps(time_points, mu * psi[i, 1])
+            dot1 = simpson(time_points, mu * psi[i, 1])
             # Clamp dot product to [-1, 1] for acos
             dot_limited = np.clip(dot1, -1, 1)
             # Fisher-Rao distance
@@ -521,3 +537,8 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
 
     return mq[:, r+2], q_evolution[:, :, r+2], f_evolution[:, :, r+2], q[:, :, 0], f[:, :, 0], ds
 
+if __name__ == "__main__":
+    main()  # Run as script: python my_module.py
+
+# Another script can import and use functions:
+# from my_module import load_data, process_data
