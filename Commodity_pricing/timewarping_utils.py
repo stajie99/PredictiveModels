@@ -344,6 +344,7 @@ def compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6):
     time_points = np.linspace(0, 1, T_minus_1)
     
     for iter in range(maxiter):
+        print(iter)
         for i in range(n):
             v = psi[i,:] - mu
             # Inner product using Simpson intergration
@@ -572,8 +573,9 @@ def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
     gam0_array = np.array(gam0)
     ts1_indices = gam0_array[:, 0] # indices from first time series
     ts2_indices = gam0_array[:, 1] # indices from second time series
-    print(f'indices from first time series are {ts1_indices}')
-    print(f'indices from second time series are {ts2_indices}')
+    ##### Uncomment below lines for debugging
+    # print(f'indices from first time series are {ts1_indices}')
+    # print(f'indices from second time series are {ts2_indices}')
 
     # Add small epsilon to handle numerical issues
     epsilon = 1e-6
@@ -592,15 +594,16 @@ def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
     # handle right boundary: adjust to 1
     if warping_norm_unique[-1] != 1:
         warping_norm_unique[-1] = 1
-    print(f'After normalization to [0, 1], t_norm is {t_norm_unique}')
-    print(f'After normalization to [0, 1], warping_norm is {warping_norm_unique}')
+    ##### uncommented below lines for debugging
+    # print(f'After normalization to [0, 1], t_norm is {t_norm_unique}')
+    # print(f'After normalization to [0, 1], warping_norm is {warping_norm_unique}')
     
-    # Check if array has any duplicates
-    has_duplicates = len(t_norm_unique) != len(np.unique(t_norm_unique))
-    print(f"t_norm has duplicates: {has_duplicates}")
+    # # Check if array has any duplicates
+    # has_duplicates = len(t_norm_unique) != len(np.unique(t_norm_unique))
+    # print(f"t_norm has duplicates: {has_duplicates}")
 
-    has_duplicates = len(warping_norm_unique) != len(np.unique(warping_norm_unique))
-    print(f"warping_norm has duplicates: {has_duplicates}")
+    # has_duplicates = len(warping_norm_unique) != len(np.unique(warping_norm_unique))
+    # print(f"warping_norm has duplicates: {has_duplicates}")
     
     if method == 'linear':
         # # Create Linear interpolation function
