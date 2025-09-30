@@ -93,8 +93,9 @@ def setup_warping_parameters(M):
         'option_showplot': 0
     }
     
-    t = np.arange(1, M+1).reshape(-1, 1)
-    
+    # t = np.arange(1, M+1).reshape(-1, 1)
+    t = np.arange(1, M+1)
+
     return warping_params, t
 
 

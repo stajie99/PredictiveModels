@@ -2,12 +2,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, CubicSpline
 # import matlab.engine
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 from scipy.integrate import simpson
 from scipy.integrate import trapezoid, cumulative_trapezoid
+from scipy.interpolate import PchipInterpolator
+from scipy.signal import savgol_filter
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -43,28 +45,31 @@ def timewarping1(f,t,lambda_=0,
         'showplot': option_showplot
     }
 
-    # enture t is a numpy array
-    if not isinstance(t, np.ndarray):
-        t = np.array(t)
+    # # enture t is a numpy array
+    # if not isinstance(t, np.ndarray):
+    #     t = np.array(t)
+
     # ensure f is a numpy array
     if not isinstance(f, np.ndarray):
         f = np.array(f) # M by N
-    # handle 1d arrays
-    if t.ndim == 1:
-        t = t.reshape(-1, 1) # make it a 2d column vector
+    # # handle 1d arrays
+    # if t.ndim == 1:
+    #     t = t.reshape(-1, 1) # make it a 2d column vector
+    
+    # a = t.shape[0]
+    # if a != 1:
+    #     t = t.T # requires t to be a row vector
 
-    a = t.shape[0]
-    if a != 1:
-        t = t.T # requires t to be a row vector
+
     # handle edge case where t has only 1 element
     if len(t.flatten()) > 1:
         binsize = np.mean(np.diff(t.flatten()))
     else:
         binsize = 0 # or np.nan, depending on needs
-    
+
     M, N = f.shape
     f0 = f.copy()
-
+    
     # choose to smooth f or not
     f = smooth_f(f, option)
     # choose to plot f or not
@@ -123,8 +128,14 @@ def timewarping1(f,t,lambda_=0,
         distance, gam0 = fastdtw(ts1.reshape(-1, 1), 
                                 ts2.reshape(-1, 1), 
                                 dist=euclidean)
-        # Normaliza
-        gam[k, :] = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])  # slight change on scale
+        # Normaliza and smoothing warping functions
+        print(f'For day {k}, warping function is {gam0}')
+
+        warping_func, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
+        t_eval = np.linspace(0, 1, len(t))
+        warping_smooth = warping_func(t_eval)
+
+        print(f'For day {k}, warping function (discretized) is {warping_smooth}')
 
     gamI = SqrtMeanInverse(gam)
 
@@ -456,8 +467,18 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
             distance, gam0 = fastdtw(ts1.reshape(-1, 1), 
                                     ts2.reshape(-1, 1), 
                                     dist=euclidean)
+            # gam0 is the warping path - it defines how the two time series are aligned to 
+            # minimize the overall distance. It's a list of coordinate pairs that map points from ts1 to 
+            # points in ts2.
+            # Boundary Conditions of warping functions
+            # 1. Starts at: (0, 0) - first points of both series
+            # 2. Ends at: (len(ts1)-1, len(ts2)-1) - last points of both series
             # Normalize warping function to [0, 1]
-            gam[k, :] = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])
+            # print(f'For day {k}, warping function is {gam0}')
+            gam_temp = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])
+            print(f'For day {k}, warping function is {gam_temp}')
+            gam[k,:] = interp1d(t, gam_temp, kind='linear', bounds_error=False, fill_value='extrapolate')
+            
 
             # Compute derivative of warping function
             gam_dev[k, :] = np.gradient(gam[k, :], 1 / (M - 1))
@@ -540,6 +561,61 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
             gam[k, :] = gam_interp(new_t)
 
     return mq[:, r+2], q_evolution[r+2, :, :], f_evolution[r+2, :, :], q, f, ds
+
+
+def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='Cubic'):
+    """
+    Create monotonic smooth warping function using PCHIP interpolation
+    Preserves monotonicity of the warping path
+    """
+    warping_func = None
+    # Convert warping path to arrays
+    gam0_array = np.array(gam0)
+    ts1_indices = gam0_array[:, 0] # indices from first time series
+    ts2_indices = gam0_array[:, 1] # indices from second time series
+    print(f'indices from first time series are {ts1_indices}')
+    print(f'indices from second time series are {ts2_indices}')
+
+    # Add small epsilon to handle numerical issues
+    epsilon = 1e-10
+    ts1_indices = ts1_indices + epsilon * np.arange(len(ts1_indices))
+
+    # Normalize to [0, 1] range
+    t_norm = ts1_indices / (ts1_length - 1)
+    warping_norm = ts2_indices / (ts2_length - 1)
+    print(f'After normalization to [0, 1], t_norm is {t_norm}')
+    print(f'After normalization to [0, 1], warping_norm is {warping_norm}')
+    
+    if method == 'linear':
+        # # Create Linear interpolation function
+        warping_func = interp1d(t_norm, warping_norm, 
+                           kind='linear', fill_value='extrapolate')
+    
+    elif method == 'cubic':
+        # Create Cubic interpolation function
+        warping_func = interp1d(t_norm, warping_norm, 
+                           kind='cubic', fill_value='extrapolate')
+    
+    elif method == 'spline':
+        # Cubic spline
+        warping_func = CubicSpline(t_norm, warping_norm,
+                              bc_type='natural')
+    
+    elif method == 'savgol':
+        # Apply Savitzky-Golay filter for smoothing
+        if len(warping_norm) > 11:  # Need enough points
+            window_length = min(11, len(warping_norm) - (1 - len(warping_norm) % 2))
+            warping_smooth = savgol_filter(warping_norm, window_length, 3)
+            warping_func = interp1d(t_norm, warping_smooth, 
+                               kind='cubic', fill_value='extrapolate')
+        else:
+            warping_func = interp1d(t_norm, warping_norm, 
+                               kind='linear', fill_value='extrapolate')
+    elif method == 'PchipInterpolator':
+    # PCHIP preserves monotonicity
+        warping_func = PchipInterpolator(t_norm, warping_norm)
+
+    return warping_func, t_norm, warping_norm
 
 if __name__ == "__main__":
     main()  # Run as script: python my_module.py
