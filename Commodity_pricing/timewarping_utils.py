@@ -103,7 +103,7 @@ def timewarping1(f,t,lambda_=0,
     gam = np.zeros((N, q.shape[0]))
     for k in range(N):
         # the k-th sample, first time/interplation point
-        q_c = q[:, k, 0].T 
+        q_c = q[:, k].T 
         # the template function
         mq_c = mq.T
         # Method 1: obtaining warping function
@@ -431,8 +431,10 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
     mq[:, 0] = np.mean(q, axis=1) # initial mean
 
     # Storage for evolution
-    q_evolution = [q.copy()]
-    f_evolution = [f.copy()]
+    # q_evolution = [q.copy()]
+    # f_evolution = [f.copy()]
+    q_evolution = np.zeros((MaxItr, q.shape[0], q.shape[1]))
+    f_evolution = np.zeros((MaxItr, q.shape[0], q.shape[1]))
 
     for r in range(MaxItr):
         # Matching Step - find optimal warping for each function
@@ -470,15 +472,17 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
             q_temp[:, k] = grad_f / np.sqrt(np.abs(grad_f) + eps)
 
         # Store results
-        q_evolution.append(q_temp.copy())
-        f_evolution.append(f_temp.copy())
+        # q_evolution.append(q_temp.copy())
+        # f_evolution.append(f_temp.copy())
+        q_evolution[r, :, :] = q_temp
+        f_evolution[r, :, :] = f_temp
 
         # Compute the objective function
         diff_srvf = mq[:, r][:, np.newaxis] - q_temp
-        srvf_term = np.sum(simps(t, diff_srvf**2, axis=0))
+        srvf_term = np.sum(simpson(t, diff_srvf**2, axis=0))
 
         gam_dev_term = 1 - np.sqrt(gam_dev.T)
-        warp_term = lambda_val * np.sum(simps(t, gam_dev_term**2, axis=0))
+        warp_term = lambda_val * np.sum(simpson(t, gam_dev_term**2, axis=0))
 
         ds.append(srvf_term + warp_term)
 
@@ -498,7 +502,7 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
         r = r + 1
         # Sequential processing
         for k in range(N):
-            q_c = q[:, k, 0].T
+            q_c = q[:, k].T
             mq_c = mq[:, r+1].T
             
             ts1 = mq_c / np.linalg.norm(mq_c)
@@ -525,17 +529,17 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
             new_t = (t[-1] - t[0]) * gamI + t[0]
             
             q_interp = interp1d(t, q_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
-            q_evolution[:, k, r+2] = (q_interp(new_t) * np.sqrt(gamI_dev)).T
+            q_evolution[r+2, :, k] = (q_interp(new_t) * np.sqrt(gamI_dev)).T
             
             # Interpolate f
             f_interp = interp1d(t, f_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
-            f_evolution[:, k, r+2] = f_interp(new_t).T
+            f_evolution[r+2, :, k] = f_interp(new_t).T
             
             # Interpolate gam
             gam_interp = interp1d(t, gam[k, :], kind='linear', fill_value='extrapolate')
             gam[k, :] = gam_interp(new_t)
 
-    return mq[:, r+2], q_evolution[:, :, r+2], f_evolution[:, :, r+2], q[:, :, 0], f[:, :, 0], ds
+    return mq[:, r+2], q_evolution[r+2, :, :], f_evolution[r+2, :, :], q, f, ds
 
 if __name__ == "__main__":
     main()  # Run as script: python my_module.py
