@@ -134,7 +134,6 @@ def timewarping1(f,t,lambda_=0,
         warping_func, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
         t_eval = np.linspace(0, 1, len(t))
         warping_smooth = warping_func(t_eval)
-
         print(f'For day {k}, warping function (discretized) is {warping_smooth}')
 
     gamI = SqrtMeanInverse(gam)
@@ -563,7 +562,7 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
     return mq[:, r+2], q_evolution[r+2, :, :], f_evolution[r+2, :, :], q, f, ds
 
 
-def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='Cubic'):
+def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
     """
     Create monotonic smooth warping function using PCHIP interpolation
     Preserves monotonicity of the warping path
@@ -577,45 +576,68 @@ def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='Cubic'):
     print(f'indices from second time series are {ts2_indices}')
 
     # Add small epsilon to handle numerical issues
-    epsilon = 1e-10
+    epsilon = 1e-6
     ts1_indices = ts1_indices + epsilon * np.arange(len(ts1_indices))
+    ts2_indices = ts2_indices + epsilon * np.arange(len(ts2_indices))
 
     # Normalize to [0, 1] range
     t_norm = ts1_indices / (ts1_length - 1)
     warping_norm = ts2_indices / (ts2_length - 1)
-    print(f'After normalization to [0, 1], t_norm is {t_norm}')
-    print(f'After normalization to [0, 1], warping_norm is {warping_norm}')
+    
+    # Trim values > 1 to 1
+    trimmed_t_norm = np.clip(t_norm, None, 1)  # Clip upper bound to 1
+    # Remove duplicates and sort
+    t_norm_unique, indices = np.unique(trimmed_t_norm, return_index=True)
+    warping_norm_unique = warping_norm[indices]
+    # handle right boundary: adjust to 1
+    if warping_norm_unique[-1] != 1:
+        warping_norm_unique[-1] = 1
+    print(f'After normalization to [0, 1], t_norm is {t_norm_unique}')
+    print(f'After normalization to [0, 1], warping_norm is {warping_norm_unique}')
+    
+    # Check if array has any duplicates
+    has_duplicates = len(t_norm_unique) != len(np.unique(t_norm_unique))
+    print(f"t_norm has duplicates: {has_duplicates}")
+
+    has_duplicates = len(warping_norm_unique) != len(np.unique(warping_norm_unique))
+    print(f"warping_norm has duplicates: {has_duplicates}")
     
     if method == 'linear':
         # # Create Linear interpolation function
-        warping_func = interp1d(t_norm, warping_norm, 
-                           kind='linear', fill_value='extrapolate')
+        warping_func = interp1d(t_norm_unique, warping_norm_unique, 
+                           kind='linear', fill_value=np.nan)
+        
+    elif method == 'quadratic':
+        # # Create Quadratic interpolation function
+        warping_func = interp1d(t_norm_unique, warping_norm_unique, 
+                           kind='quadratic', fill_value=np.nan)
     
     elif method == 'cubic':
         # Create Cubic interpolation function
-        warping_func = interp1d(t_norm, warping_norm, 
-                           kind='cubic', fill_value='extrapolate')
+        warping_func = interp1d(t_norm_unique, warping_norm_unique, 
+                           kind='cubic', fill_value=np.nan)
+        # print('cubic done')
     
     elif method == 'spline':
-        # Cubic spline
-        warping_func = CubicSpline(t_norm, warping_norm,
+        # Cubic spline. bc_type: Boundary condition type.
+        warping_func = CubicSpline(t_norm_unique, warping_norm_unique,
                               bc_type='natural')
     
     elif method == 'savgol':
         # Apply Savitzky-Golay filter for smoothing
-        if len(warping_norm) > 11:  # Need enough points
-            window_length = min(11, len(warping_norm) - (1 - len(warping_norm) % 2))
-            warping_smooth = savgol_filter(warping_norm, window_length, 3)
-            warping_func = interp1d(t_norm, warping_smooth, 
-                               kind='cubic', fill_value='extrapolate')
+        if len(warping_norm_unique) > 11:  # Need enough points
+            window_length = min(11, len(warping_norm_unique) - (1 - len(warping_norm_unique) % 2))
+            warping_smooth = savgol_filter(warping_norm_unique, window_length, 3)
+            warping_func = interp1d(t_norm_unique, warping_smooth, 
+                               kind='cubic', fill_value=np.nan)
         else:
-            warping_func = interp1d(t_norm, warping_norm, 
-                               kind='linear', fill_value='extrapolate')
+            warping_func = interp1d(t_norm_unique, warping_norm_unique, 
+                               kind='linear', fill_value=np.nan)
     elif method == 'PchipInterpolator':
-    # PCHIP preserves monotonicity
-        warping_func = PchipInterpolator(t_norm, warping_norm)
+    # PCHIP preserves monotonicity: (PCHIP stands for Piecewise Cubic Hermite Interpolating Polynomial).
+        warping_func = PchipInterpolator(t_norm_unique, warping_norm_unique)
 
-    return warping_func, t_norm, warping_norm
+    return warping_func, t_norm_unique, warping_norm_unique
 
 if __name__ == "__main__":
     main()  # Run as script: python my_module.py
