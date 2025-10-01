@@ -309,7 +309,7 @@ def SqrtMeanInverse(gam):
     maxiter = 20
     lvm = np.zeros(maxiter)
     vec = np.zeros((n, psi.shape[1]))
-    mu, _, _ = compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6)
+    mu = compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6)
 
     gam_mu = np.zeros(len(mu) + 1)
     gam_mu[1:] = np.cumsum(mu**2)
@@ -346,6 +346,7 @@ def compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6):
     for iter in range(maxiter):
         print(iter)
         for i in range(n):
+            print(f'i is {i}')
             v = psi[i,:] - mu
             # Inner product using Simpson intergration
             dot1 = simpson(time_points, mu * psi[i, 1])
@@ -360,21 +361,21 @@ def compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6):
             else:
                 vec[i, :] = np.zeros(T_minus_1)
             
-            # Average direction
-            vm = np.mean(vec, axis=0)
-            # Length of vm (L2 norm weighted by dT)
-            lvm[iter] = np.sqrt(np.sum(vm**2) * dT)
+        # Average direction
+        vm = np.mean(vec, axis=0)
+        # Length of vm (L2 norm weighted by dT)
+        lvm[iter] = np.sqrt(np.sum(vm**2) * dT)
 
+
+        # check convergence
+        if lvm[iter] < tol or iter == maxiter - 1:
+            break
+        else: 
             # Update mean using exponential map
-            if lvm[iter] > 1e-10: # avoid division by zero
-                mu = (np.cos(t * lvm[iter]) * mu + (np.sin(t * lvm[iter]) / lvm[iter]) * vm)
-            else:
-                mu = mu.copy()
-            # check convergence
-            if lvm[iter] < tol or iter == maxiter - 1:
-                break
+            mu = (np.cos(t * lvm[iter]) * mu + (np.sin(t * lvm[iter]) / lvm[iter]) * vm)
+            
 
-            return mu, lvm[:iter+1], iter+1
+    return mu #, lvm[:iter+1], iter+1
 
 def invertGamma(gam):
     # Invert a warping function gamma
