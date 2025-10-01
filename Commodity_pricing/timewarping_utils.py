@@ -129,12 +129,13 @@ def timewarping1(f,t,lambda_=0,
                                 ts2.reshape(-1, 1), 
                                 dist=euclidean)
         # Normaliza and smoothing warping functions
-        print(f'For day {k}, warping function is {gam0}')
-
-        warping_func, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
-        t_eval = np.linspace(0, 1, len(t))
-        warping_smooth = warping_func(t_eval)
-        print(f'For day {k}, warping function (discretized) is {warping_smooth}')
+        # print(f'For day {k}, warping function is {gam0}')
+        warping_smooth, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
+        # t_eval = np.linspace(0, 1, len(t))
+        # # warping_smooth = warping_func(t_eval)
+        
+        gam[k,:] = warping_smooth #interp1d(t, warping_smooth, kind='linear', bounds_error=False, fill_value='extrapolate')
+        # print(f'For day {k}, warping function (discretized) is {gam[k,:]}')
 
     gamI = SqrtMeanInverse(gam)
 
@@ -190,7 +191,7 @@ def timewarping1(f,t,lambda_=0,
     # calculate psi
     psi = np.sqrt(fy + np.finfo(float).eps)
 
-    if option.showplot == 1:
+    if option['showplot'] == 1:
         # Create normalized x-axis for warping functions (0 to 1)
         x_norm = np.arrange(M) / (M - 1)
         # Figure 2: Warping functions
@@ -344,12 +345,12 @@ def compute_warping_mean(psi, maxiter = 20, t=1, tol=1e-6):
     time_points = np.linspace(0, 1, T_minus_1)
     
     for iter in range(maxiter):
-        print(iter)
+        # print(iter)
         for i in range(n):
-            print(f'i is {i}')
+            # print(f'i is {i}')
             v = psi[i,:] - mu
             # Inner product using Simpson intergration
-            dot1 = simpson(time_points, mu * psi[i, 1])
+            dot1 = simpson(mu * psi[i, 1], time_points)
             # Clamp dot product to [-1, 1] for acos
             dot_limited = np.clip(dot1, -1, 1)
             # Fisher-Rao distance
@@ -445,8 +446,8 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
     # Storage for evolution
     # q_evolution = [q.copy()]
     # f_evolution = [f.copy()]
-    q_evolution = np.zeros((MaxItr, q.shape[0], q.shape[1]))
-    f_evolution = np.zeros((MaxItr, q.shape[0], q.shape[1]))
+    q_evolution = np.zeros((MaxItr+1, q.shape[0], q.shape[1]))
+    f_evolution = np.zeros((MaxItr+1, q.shape[0], q.shape[1]))
 
     for r in range(MaxItr):
         # Matching Step - find optimal warping for each function
@@ -474,24 +475,37 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
             # Boundary Conditions of warping functions
             # 1. Starts at: (0, 0) - first points of both series
             # 2. Ends at: (len(ts1)-1, len(ts2)-1) - last points of both series
-            # Normalize warping function to [0, 1]
+
+            # # Normalize warping function to [0, 1]
             # print(f'For day {k}, warping function is {gam0}')
-            gam_temp = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])
-            print(f'For day {k}, warping function is {gam_temp}')
-            gam[k,:] = interp1d(t, gam_temp, kind='linear', bounds_error=False, fill_value='extrapolate')
-            
+
+            warping_smooth, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
+            # t_eval = np.linspace(0, 1, len(t))
+            # # warping_smooth = warping_func(t_eval)
+            # # print(f'For day {k}, warping function (discretized) is {warping_smooth}')
+
+            gam[k,:] = warping_smooth #interp1d(t, warping_smooth, kind='linear', bounds_error=False, fill_value='extrapolate')
+            # print(f'For day {k}, warping function (discretized) is {gam[k,:]}')
 
             # Compute derivative of warping function
-            gam_dev[k, :] = np.gradient(gam[k, :], 1 / (M - 1))
+            # gam_dev[k, :] = np.gradient(gam[k, :], 1 / (M - 1))
+            # (Compact safe version)
+            gam_dev[k, :] = np.gradient(
+                np.nan_to_num(gam[k, :], nan=0.0, posinf=1.0, neginf=-1.0), 
+                1 / (M - 1)
+            )
 
             # Warp the original function
             warped_time = (t[-1] - t[0]) * gam[k, :] + t[0]
             f_interp = interp1d(t, f[:, k], kind='linear', bounds_error=False, fill_value='extrapolate')
             f_temp[:, k] = f_interp(warped_time)
+            # print(f'f_temp is {f_temp[:, k]}')
 
             # Compute SRVF of warped function
             grad_f = np.gradient(f_temp[:, k], binsize)
+            # print(f'grad_f is {grad_f}')
             q_temp[:, k] = grad_f / np.sqrt(np.abs(grad_f) + eps)
+            # print(f'q_temp is {q_temp[:, k]}')
 
         # Store results
         # q_evolution.append(q_temp.copy())
@@ -501,15 +515,23 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
 
         # Compute the objective function
         diff_srvf = mq[:, r][:, np.newaxis] - q_temp
-        srvf_term = np.sum(simpson(t, diff_srvf**2, axis=0))
+        # print(f'Shape of t is {t.shape}')
+        # print(f'Shape of diff_srvf is {diff_srvf.shape}')
+        srvf_term = np.sum(simpson(diff_srvf**2, t, axis=0))
+        # print(f'srvf_term is {srvf_term}')
 
-        gam_dev_term = 1 - np.sqrt(gam_dev.T)
-        warp_term = lambda_val * np.sum(simpson(t, gam_dev_term**2, axis=0))
+
+        # Only take sqrt of non-negative values
+        gam_dev_clipped = np.maximum(gam_dev.T, 0)  # Set negative values to 0
+        gam_dev_term = 1 - np.sqrt(gam_dev_clipped)
+        warp_term = lambda_val * np.sum(simpson(gam_dev_term**2, t, axis=0))
+        # print(f'warp_term is {warp_term}')
 
         ds.append(srvf_term + warp_term)
 
         # Minimization Step - compute new mean
         mq[:, r+1] = np.mean(q_temp, axis=1)
+        # print(f'mq[:, r+1] is {mq[:, r+1]}')
 
         # Check convergence
         qun[r] = np.linalg.norm(mq[:, r+1] - mq[:,r]) / np.linalg.norm(mq[:, r])
@@ -524,17 +546,25 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
         r = r + 1
         # Sequential processing
         for k in range(N):
+            print(f'In compute_karcher_mean_f, k is {k}')
             q_c = q[:, k].T
-            mq_c = mq[:, r+1].T
+            mq_c = mq[:, r].T
             
             ts1 = mq_c / np.linalg.norm(mq_c)
             ts2 = q_c / np.linalg.norm(q_c)
-            
+            # print(mq_c)
+            # print(ts2)
             distance, gam0 = fastdtw(ts1.reshape(-1, 1), 
                                     ts2.reshape(-1, 1), 
                                     dist=euclidean)
-            
-            gam[k, :] = (gam0 - gam0[0]) / (gam0[-1] - gam0[0])  # slight change on scale
+            warping_smooth, t_norm, warping_norm = monotonic_smooth_warping(gam0, len(t), len(t))
+            # t_eval = np.linspace(0, 1, len(t))
+            # # warping_smooth = warping_func(t_eval)
+            # # 
+
+            gam[k,:] = warping_smooth # interp1d(t, warping_smooth, kind='linear', bounds_error=False, fill_value='extrapolate')
+            # print(f'For day {k}, warping function (discretized) is {gam[k,:]}')
+
             gam_dev[k, :] = np.gradient(gam[k, :], 1/(M-1))
 
         gamI = SqrtMeanInverse(gam)
@@ -542,29 +572,31 @@ def compute_karcher_mean_f(q, f, t, lambda_val=0, MaxItr=30, tol=1e-2):
 
         # Interpolate mq
         new_t_mq = (t[-1] - t[0]) * gamI + t[0]
+        # print(f'Interpolate mq, t is of shape {t.shape}')
+        # print(f'Interpolate mq, mq is of shape {mq[:, r+1].shape}')
         mq_interp = interp1d(t, mq[:, r+1], kind='linear', axis=0, fill_value='extrapolate')
-        mq[:, r+2] = (mq_interp(new_t_mq) * np.sqrt(gamI_dev)).T
+        mq[:, r+1] = (mq_interp(new_t_mq) * np.sqrt(gamI_dev)).T
 
         # Process each k
         for k in range(N):
             # Interpolate q
             new_t = (t[-1] - t[0]) * gamI + t[0]
             
-            q_interp = interp1d(t, q_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
-            q_evolution[r+2, :, k] = (q_interp(new_t) * np.sqrt(gamI_dev)).T
+            q_interp = interp1d(t, q_evolution[r, :, k], kind='linear', axis=0, fill_value='extrapolate')
+            q_evolution[r+1, :, k] = (q_interp(new_t) * np.sqrt(gamI_dev)).T
             
             # Interpolate f
-            f_interp = interp1d(t, f_evolution[:, k, r+1], kind='linear', axis=0, fill_value='extrapolate')
-            f_evolution[r+2, :, k] = f_interp(new_t).T
+            f_interp = interp1d(t, f_evolution[r, :, k], kind='linear', axis=0, fill_value='extrapolate')
+            f_evolution[r+1, :, k] = f_interp(new_t).T
             
             # Interpolate gam
             gam_interp = interp1d(t, gam[k, :], kind='linear', fill_value='extrapolate')
             gam[k, :] = gam_interp(new_t)
 
-    return mq[:, r+2], q_evolution[r+2, :, :], f_evolution[r+2, :, :], q, f, ds
+    return mq[:, r+1], q_evolution[r+1, :, :], f_evolution[r+1, :, :], q, f, ds
 
 
-def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
+def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='linear'):
     """
     Create monotonic smooth warping function using PCHIP interpolation
     Preserves monotonicity of the warping path
@@ -595,7 +627,7 @@ def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
     # handle right boundary: adjust to 1
     if warping_norm_unique[-1] != 1:
         warping_norm_unique[-1] = 1
-    ##### uncommented below lines for debugging
+    # ##### uncommented below lines for debugging
     # print(f'After normalization to [0, 1], t_norm is {t_norm_unique}')
     # print(f'After normalization to [0, 1], warping_norm is {warping_norm_unique}')
     
@@ -641,7 +673,22 @@ def monotonic_smooth_warping(gam0, ts1_length, ts2_length, method='spline'):
     # PCHIP preserves monotonicity: (PCHIP stands for Piecewise Cubic Hermite Interpolating Polynomial).
         warping_func = PchipInterpolator(t_norm_unique, warping_norm_unique)
 
-    return warping_func, t_norm_unique, warping_norm_unique
+
+    
+    t_eval = np.linspace(0, 1, ts1_length)
+    warping_smooth = warping_func(t_eval)
+    # #### visualization of interp1d
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(t_norm_unique, warping_norm_unique, 'ro', markersize=8, label='Original data')
+    # plt.plot(t_eval, warping_smooth, 'b-', label=f'{method} interpolation', alpha=0.7)
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.xlabel('x')
+    # plt.ylabel('y')
+    # plt.title('Interpolation Comparison')
+    # plt.show()
+
+    return warping_smooth, t_norm_unique, warping_norm_unique
 
 if __name__ == "__main__":
     main()  # Run as script: python my_module.py
