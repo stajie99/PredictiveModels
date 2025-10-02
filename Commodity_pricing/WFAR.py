@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import scipy.io
 from datetime import datetime, date, timedelta
-from timewarping_utils import timewarping1, SqrtMeanInverse
+from timewarping_utils import timewarping1, KarcherMeansof_warpingfunctions, replicate_km_gam
 
 # data prepare Method 1:
 # # import sys
@@ -130,164 +130,6 @@ def debug_timewarping(f_wz, t, warping_params):
         traceback.print_exc()
         return None, None
 
-def replicate_km_gam(KM_gam, N_forecast, wz):
-    """
-    Replicate KM_gam matrix similar to MATLAB code
-    
-    Parameters:
-    -----------
-    KM_gam : numpy array, shape (7, M)
-        Karcher means of warping functions
-    N_forecast : int
-        Forecast horizon
-    wz : int
-        Window size or additional parameter
-    
-    Returns:
-    --------
-    KM_gam_final : numpy array, shape (N_forecast + wz, M)
-        Replicated matrix
-    """
-    
-    # MATLAB: KM_gam = repmat(KM_gam, floor((N_forecast+wz)/7), 1);
-    n_repeats = int(np.floor((N_forecast + wz) / 7))
-    KM_gam_repeated = np.tile(KM_gam, (n_repeats, 1))
-    
-    # MATLAB: KM_gam=[KM_gam; KM_gam(1:mod((N_forecast+wz),7),:)];
-    remaining_rows = (N_forecast + wz) % 7
-    
-    if remaining_rows > 0:
-        KM_gam_remaining = KM_gam[:remaining_rows, :]
-        KM_gam_final = np.vstack([KM_gam_repeated, KM_gam_remaining])
-    else:
-        KM_gam_final = KM_gam_repeated
-    
-    # Verify final shape
-    expected_rows = N_forecast + wz
-    actual_rows = KM_gam_final.shape[0]
-    
-    if actual_rows != expected_rows:
-        print(f"Warning: Expected {expected_rows} rows, got {actual_rows}")
-    
-    return KM_gam_final
-
-# Usage example
-# Assuming you have these variables:
-# KM_gam = result from KarcherMeansof_warpingfunctions (shape: 7 x M)
-# N_forecast = some integer
-# wz = some integer
-
-# KM_gam_final = km_gam(KM_gam, N_forecast, wz)
-
-
-def KarcherMeansof_warpingfunctions(gam, day_no):
-    """
-    Karcher Mean of Warping functions, grouped by Mon, Tue till Sun.
-    
-    Parameters:
-    -----------
-    gam : numpy array, shape (N, T)
-        Warping functions for N days, each with T time points
-    day_no : int
-        Day number of the first day ### (1=Sunday, 2=Monday, ..., 7=Saturday)
-        !!! In python, Monday=0, Sunday=6
-    
-    Returns:
-    --------
-    KMgamma : numpy array, shape (7, T)
-        Karcher means arranged starting from day_no
-    gamI_cate : numpy array, shape (7, T)
-        Karcher means categorized by day of week (Sunday to Saturday)
-    """
-    
-    # Get dimensions
-    N, T = gam.shape  # N days, T time points
-    
-    # Create day number sequence starting from day_no
-    # MATLAB: dayno = [day_no:7 1:day_no-1]'
-    if day_no <= 7:
-        dayno = np.concatenate([
-            np.arange(day_no, 8),  # day_no to 7
-            np.arange(1, day_no)   # 1 to day_no-1
-        ])
-    else:
-        raise ValueError("day_no must be between 1 and 7")
-    
-    dayno = dayno.reshape(-1, 1)  # Make it a column vector
-    
-    # MATLAB: Dayno = repmat(dayno, floor(N/7), 1)
-    n_repeats = int(np.floor(N / 7))
-    Dayno = np.tile(dayno, (n_repeats, 1))
-    
-    # MATLAB: Dayno = [Dayno; Dayno(1:mod(N,7),:)]
-    remaining_rows = N % 7
-    if remaining_rows > 0:
-        Dayno = np.vstack([Dayno, Dayno[:remaining_rows, :]])
-    
-    # MATLAB: gam = [Dayno gam]
-    gam_with_days = np.hstack([Dayno, gam])
-    
-    # Initialize arrays for each day of week
-    gamSun = np.zeros((0, T))  # Empty array with T columns
-    gamMon = np.zeros((0, T))
-    gamTue = np.zeros((0, T))
-    gamWed = np.zeros((0, T))
-    gamThu = np.zeros((0, T))
-    gamFri = np.zeros((0, T))
-    gamSat = np.zeros((0, T))
-    
-    # Categorize warping functions by day of week
-    for i in range(N):
-        day_code = gam_with_days[i, 0]  # First column contains day code
-        
-        # Extract the warping function (excluding day code column)
-        warping_func = gam_with_days[i, 1:].reshape(1, -1)
-        
-        if day_code == 6:     # Sunday
-            gamSun = np.vstack([gamSun, warping_func])
-        elif day_code == 0:   # Monday
-            gamMon = np.vstack([gamMon, warping_func])
-        elif day_code == 1:   # Tuesday
-            gamTue = np.vstack([gamTue, warping_func])
-        elif day_code == 2:   # Wednesday
-            gamWed = np.vstack([gamWed, warping_func])
-        elif day_code == 3:   # Thursday
-            gamThu = np.vstack([gamThu, warping_func])
-        elif day_code == 4:   # Friday
-            gamFri = np.vstack([gamFri, warping_func])
-        elif day_code == 5:   # Saturday
-            gamSat = np.vstack([gamSat, warping_func])
-        else:
-            raise ValueError(f"Invalid day code: {day_code}")
-    
-    # Initialize gamI_cate array
-    gamI_cate = np.zeros((7, T))
-    
-    # Compute Karcher means for each day category
-    # Note: You'll need to implement or import Jiejie_SqrtMean/SqrtMeanInverse function
-    if gamSun.shape[0] > 0:
-        gamI_cate[0, :] = SqrtMeanInverse(gamSun)  # Mon (index 0)
-    if gamMon.shape[0] > 0:
-        gamI_cate[1, :] = SqrtMeanInverse(gamMon)  # Tue (index 1)
-    if gamTue.shape[0] > 0:
-        gamI_cate[2, :] = SqrtMeanInverse(gamTue)  # Wed (index 2)
-    if gamWed.shape[0] > 0:
-        gamI_cate[3, :] = SqrtMeanInverse(gamWed)  # Thu (index 3)
-    if gamThu.shape[0] > 0:
-        gamI_cate[4, :] = SqrtMeanInverse(gamThu)  # Fri (index 4)
-    if gamFri.shape[0] > 0:
-        gamI_cate[5, :] = SqrtMeanInverse(gamFri)  # Sat (index 5)
-    if gamSat.shape[0] > 0:
-        gamI_cate[6, :] = SqrtMeanInverse(gamSat)  # Sun (index 6)
-    
-    # Rearrange according to starting day
-    # MATLAB: KMgamma = [gamI_cate(day_no:7,:); gamI_cate(1:day_no-1,:)]
-    KMgamma = np.vstack([
-        gamI_cate[day_no-1:7, :],    # day_no to 7
-        gamI_cate[0:day_no-1, :]     # 1 to day_no-1
-    ])
-    
-    return KMgamma, gamI_cate
 
 def main():
 # def main(): defines a function called main() that serves as the entry point of a Python program when 
@@ -322,7 +164,7 @@ def main():
 
         # Get Karcher Mean of warping functions by day of week
         print("Step 5: Getting the Karcher Mean of warping functions as 7 seasonal fixed warping functions...")
-        KM_gam, _ = KarcherMeansof_warpingfunctions(gam.T, day_no)[0]
+        KM_gam, _ = KarcherMeansof_warpingfunctions(gam, day_no)
         KM_gam_final = replicate_km_gam(KM_gam, N_forecast, wz)
         print(f'KM_gam_final is {KM_gam_final}')
             
