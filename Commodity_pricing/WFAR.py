@@ -129,7 +129,17 @@ def debug_timewarping(f_wz, t, warping_params):
         import traceback
         traceback.print_exc()
         return None, None
+    
+def fourier_basis_transformation(M, ):
+    # Vectorized version - more efficient
+    electime = np.arange(1, M + 1)
+    electimescaled = electime / M  # Direct vector division
 
+    # Create the fd objects by fourier transformation        
+    CAnbasis = 23
+    totalK = (CAnbasis - 1) // 2
+
+    return electimescaled, CAnbasis, totalK
 
 def main():
 # def main(): defines a function called main() that serves as the entry point of a Python program when 
@@ -167,6 +177,10 @@ def main():
         KM_gam, _ = KarcherMeansof_warpingfunctions(gam, day_no)
         KM_gam_final = replicate_km_gam(KM_gam, N_forecast, wz)
         print(f'KM_gam_final is {KM_gam_final}')
+
+        # Prepare for scaled time ticks, no. of basis, and totalK
+        print("Step 6: Prepare Fourier Basis functions...")
+        fourier_basis_transformation(M)
             
     except Exception as e:
         print(f"Main execution error: {e}")
