@@ -332,10 +332,13 @@ def Jiejie_SqrtMean(gam):
     for i in range(n):
         # the SRSF of the inital warping functions
         # 2-norm of psi is 1
-        psi[i, :] = np.sqrt(np.diff(gam[i, :]) / dT + np.finfo(float).eps)
+        # print(f'for i, psi[i, :] is {np.diff(gam[i, :])}')
+        psi[i, :] = np.sqrt(np.maximum(np.diff(gam[i, :]), 0) / dT + np.finfo(float).eps)
     # Compute Karcher Mean of warping functions
     # Find direction
     mnpsi = np.mean(psi, axis = 0) # mean along rows
+    # print("NaN in psi:", np.isnan(psi).any())
+    # print("NaN in mnpsi:", np.isnan(mnpsi).any())
     dis_qq = np.sqrt(np.sum((psi.T - mnpsi.reshape(-1, 1) * np.ones((1,n)))**2, axis=0))
 
     min_ind = np.argmin(dis_qq)
